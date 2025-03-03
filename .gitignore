@@ -1,0 +1,7 @@
+venv/
+
+classes/__pycache__
+
+proposals/
+
+outputs/timetable_*.png
