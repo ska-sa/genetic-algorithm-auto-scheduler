@@ -97,6 +97,33 @@ def get_proposal_by_id(proposal_id: int) -> Proposal:
     global PROPOSALS
     return next((p for p in PROPOSALS if p.id == proposal_id), None)
 
+def uct_to_lst(datetime: datetime) -> datetime:
+    """
+    Convert uct to lst
+    """
+    return datetime
+
+def get_night_window(date: date) -> tuple[datetime, datetime]:
+    """
+    Return night datetime window for that day
+    """
+    start_datetime: datetime = datetime(date)
+    start_datetime.hour = 18
+    end_datetime: datetime = datetime(date)
+    end_datetime.day += 1
+    end_datetime.hour = 6
+    return (start_datetime, end_datetime)
+
+def get_sunrise_sunset(date: date) -> tuple[datetime, datetime]:
+    """
+    Return sunrise and sunset datetime for that day
+    """
+    sunrise_datetime: datetime = datetime(date)
+    sunrise_datetime.hour = 6
+    sunset_datetime: datetime = datetime(date)
+    sunset_datetime.hour = 18
+    return sunrise_datetime, sunset_datetime
+
 
 class Timetable:
     def __init__(self, schedules: list[list[int]] = list()):
@@ -121,29 +148,62 @@ class Timetable:
                 timeslot_indexes.append(i)
         return timeslot_indexes
 
-    # Contraints
-    #   
-
     def compute_penalty(self, proposal_id) -> float:
         penalty: float = 1
+        penalty_factors: list[float] = list([0.95, 0.90, 0.85, 0.80])
+        penalty_factor: float = penalty_factors[0]
         """
         List of contraints
-            - Check LST start - start end window
-            - Check for gaps between scheduled proposals
-            - Check for partially allocated proposals
-            - Check score
-            - Check for night obs.
-            - Check for avoid sunset/sunrise
-            - Check for min antenna *
+            - 1. Check for proposal score/priority
+            - 2. Check LST start - start end window
+            - 3. Check for gaps between scheduled proposals
+            - 4. Check for partially allocated proposals
+            - 5. Check for night obs.
+            - 6. Check for avoid sunset/sunrise
+            - 7. Check for min antenna *
         """
         for schedule in self.schedules:
             t_id, p_id = schedule
             if p_id is not None and p_id == proposal_id:
                 timeslot = get_timeslot_by_id(t_id)
                 proposal = get_proposal_by_id(p_id)
+
+                # 1. Check for proposal score/priority
+                penalty_factor = penalty_factors[proposal.get_score() - 1]
+
+                # 2. Check LST start - start end window
+                start_time: time = uct_to_lst(timeslot.start_time)
+                start_end_time: time = uct_to_lst(timeslot.start_time)
+                timeslot_start_time: time = time(timeslot.start_time)
+                if not (start_time <= timeslot_start_time and start_end_time >= timeslot_start_time):
+                    midpoint_start_time: time = (start_time + start_end_time) / 2
+                    penalty * (penalty_factor ** abs(midpoint_start_time - timeslot_start_time))
+
+                # 3. Checking gaps between scheduled proposals
                 proposal_timeslot_indexes = self.get_proposal_timeslot_indexes(proposal_id)
-                penalty *= (0.1 ** (abs(proposal.simulated_duration - timeslot.get_duration() * len(proposal_timeslot_indexes)) / (7 * 24 * 60 * 60))) # Apply penalty for partially allocated proposal
-                penalty *= (0.9 ** ((1 - (min(proposal_timeslot_indexes) + len(proposal_timeslot_indexes) - max(proposal_timeslot_indexes))) / (7 * 24 * 60 * 60))) # Apply penalty for gaps of a partially allocated proposal
+                penalty *= (penalty_factor ** (abs(proposal.simulated_duration - timeslot.get_duration() * len(proposal_timeslot_indexes)) / (7 * 24 * 60 * 60))) # Apply penalty for partially allocated proposal
+                
+                # 4. Checking partially allocated proposals
+                penalty *= (penalty_factor ** ((1 - (min(proposal_timeslot_indexes) + len(proposal_timeslot_indexes) - max(proposal_timeslot_indexes))) / (7 * 24 * 60 * 60))) # Apply penalty for gaps of a partially allocated proposal
+        
+
+                # 5. Check for night obs.
+                night_start_datetime, night_end_datetime = get_night_window(date(timeslot.start_time))
+                if not (night_start_datetime <= timeslot.start_time and night_end_datetime >= timeslot.end_time):
+                    night_mindpoint_datetime = (night_start_datetime + night_end_datetime) / 2
+                    timeslot_midpoint_datetime = (timeslot.start_time + timeslot.end_time) / 2
+                    penalty *= (penalty_factor ** abs(timeslot_midpoint_datetime - night_mindpoint_datetime))
+
+                # 6. Check for avoid sunset/sunrise
+                if proposal.avoid_sunrise_sunset:
+                    sunrise_datetime, sunset_datetime = get_sunrise_sunset(date(timeslot.start_time))
+                    if (timeslot.start_time <= sunrise_datetime and timeslot.end_time >= sunrise_datetime) or (timeslot.start_time <= sunset_datetime and timeslot.end_time >= sunset_datetime):
+                        penalty *= penalty_factor
+
+
+                # 7. Check for min antenna *
+                pass
+
         return penalty
     
     def score(self):
@@ -154,7 +214,8 @@ class Timetable:
             if proposal_id is not None:
                 proposal = get_proposal_by_id(proposal_id)
                 #timeslot = get_timeslot_by_id(timeslot_id)
-                score += proposal.score * self.compute_penalty(proposal_id)
+                #score += proposal.score * self.compute_penalty(proposal_id)
+                score += self.compute_penalty(proposal_id)
         return score #/ total_duration
 
     
@@ -353,7 +414,7 @@ def main():
     """
 
     print("Generating Timetable using Genetic Algorithim")
-    genetic_algorithm: GeneticAlgorithm = GeneticAlgorithm(10, 10000)
+    genetic_algorithm: GeneticAlgorithm = GeneticAlgorithm(10, 1000)
     best_timetable: Timetable = genetic_algorithm.get_best_fit_timetable()
     best_timetable.display()
 
