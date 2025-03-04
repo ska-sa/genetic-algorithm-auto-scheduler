@@ -6,13 +6,7 @@ The current manual method of scheduling radio astronomy observations at SARAO is
 
 ## Working principle
 - We encode a timetable as a list of list of two integers timeslot id, and proposal id, in this formart.
-- timetable = [
--    [timeslot_0_id, propsal_0_id],
--    .
--    .
--    .
--    [timeslot_n_id, proposal_n_id]
-- ]
+- timetable = [[timeslot_0_id, propsal_0_id], ..., [timeslot_n_id, proposal_n_id]]
 - These id's are used to access the the acttual timeslot and proposal from TIMESLOT, and PROPOSALS which containts timeslots and proposals that has the following data fields. 
 - timeslot:
 -    - id: int
