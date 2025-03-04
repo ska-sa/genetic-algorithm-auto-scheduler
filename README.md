@@ -9,33 +9,42 @@ The current manual method of scheduling radio astronomy observations at SARAO is
 - timetable = [[timeslot_0_id, propsal_0_id], ..., [timeslot_n_id, proposal_n_id]]
 - These id's are used to access the the acttual timeslot and proposal from TIMESLOT, and PROPOSALS which containts timeslots and proposals that has the following data fields. 
 - timeslot:
--    - id: int
--    - start_dateime: datetime
--    - end_datetime: datetime
+-   - id: int
+-   - start_dateime: datetime
+-   - end_datetime: datetime
 
 - proposal:
--    - id: int
--    - owner_email: str
--    - build_time: int
--    - prefered_dates_start: list[date]
--    - prefered_dates_end: list[date]
--    - avoid_dates_start: list[date]
--    - avoid_dates_end: list[date]
--    - night_obs: bool
--    - avoid_sunrise_sunset: bool
--    - minimum_antennas: int
--    - lst_start_time: time
--    - lst_start_end_time: time
--    - simulated_duration: int
--    - score: int
+-   - id: int
+-   - owner_email: str
+-   - build_time: int
+-   - prefered_dates_start: list[date]
+-   - prefered_dates_end: list[date]
+-   - avoid_dates_start: list[date]
+-   - avoid_dates_end: list[date]
+-   - night_obs: bool
+-   - avoid_sunrise_sunset: bool
+-   - minimum_antennas: int
+-   - lst_start_time: time
+-   - lst_start_end_time: time
+-   - simulated_duration: int
+-   - score: int
 
--We then utilize genetic algorithms processe like:
--    timetables generation
--    timetable rating, and selection
--    timetable cross over
--    timetable mutation
+- We then utilize genetic algorithms processe like:
+-   -timetables generation
+-   -timetable rating, and selection
+-   -timetable cross over
+-   -timetable mutation
 
--Over a predefined number of generations we get the best fit timetable.
+- It worth noting that the following constraints were considered when calculating the score/fitness of each timtable:
+-   - Proposal's score/priority
+-   - Proposal's LST start and start end time
+-   - Proposal's timeslot gaps
+-   - Proposal's number of allocated timeslots compared with its duration
+-   - Proposal's night observations condition
+-   - Proposal's avoid sunsrise/sunset condition
+-   - Proposal's minimum number of antennas compared with available antenna (future work)
+
+- Over a predefined number of generations we get the best fit timetable.
 
 ## File Structure
 
