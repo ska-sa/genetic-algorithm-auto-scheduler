@@ -25,5 +25,5 @@ class Proposal():
         hour, minute = map(int, time_str.split(":"))
         return time(hour, minute)
     
-    def get_score(self):
+    def get_score(self) -> int:
         return 1
