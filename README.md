@@ -30,10 +30,10 @@ The current manual method of scheduling radio astronomy observations at SARAO is
 -   - score: int
 
 - We then utilize genetic algorithms processe like:
--   -timetables generation
--   -timetable rating, and selection
--   -timetable cross over
--   -timetable mutation
+-   - timetables generation
+-   - timetable rating, and selection
+-   - timetable cross over
+-   - timetable mutation
 
 - It worth noting that the following constraints were considered when calculating the score/fitness of each timtable:
 -   - Proposal's score/priority
