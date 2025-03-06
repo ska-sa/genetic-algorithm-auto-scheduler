@@ -59,8 +59,10 @@ def read_proposals_from_csv(file_path: str) -> list[Proposal]:
                 Proposal.parse_time(row['lst_start']),
                 Proposal.parse_time(row['lst_start_end']),
                 int(row['simulated_duration']),
-                random.randint(1,  1) #float(row['score'])
+                random.randint(1,  4) #float(row['score'])
             ))
+            if i == 20:
+                break
     return proposals
 
 
@@ -97,32 +99,71 @@ def get_proposal_by_id(proposal_id: int) -> Proposal:
     global PROPOSALS
     return next((p for p in PROPOSALS if p.id == proposal_id), None)
 
-def uct_to_lst(datetime: datetime) -> datetime:
+def utc_to_lst(utc_datetime: datetime) -> datetime:
     """
-    Convert uct to lst
+    Convert UTC datetime to Local Sidereal Time (LST) datetime.
+    
+    Parameters:
+    utc_datetime (datetime): The UTC datetime object to be converted.
+    
+    Returns:
+    datetime: The corresponding LST datetime object.
     """
-    return datetime
+    # Get the longitude and latitude of the location (in degrees)
+    longitude = 18.478847  # Cape Town longitude
+    latitude = -33.944382  # Cape Town latitude
+
+    # Calculate the Sidereal Time at Greenwich (GST) in hours
+    gst_hours = (utc_datetime.timetuple().tm_year,
+                 utc_datetime.timetuple().tm_yday,
+                 utc_datetime.hour + utc_datetime.minute / 60 + utc_datetime.second / 3600)
+    gst_hours = (18.697374558 + 24.06570982441908 * (gst_hours[0] - 2000) + 0.000026 * (gst_hours[0] - 2000) ** 2 + 1.0027379093 * gst_hours[1] + gst_hours[2]) % 24
+
+    # Convert GST to LST
+    lst_hours = (gst_hours + longitude / 15) % 24
+
+    # Convert LST hours to LST datetime
+    lst_datetime = utc_datetime.replace(hour=int(lst_hours),
+                                       minute=int((lst_hours % 1) * 60),
+                                       second=int((lst_hours % 1) * 3600) % 60,
+                                       microsecond=0)
+
+    return lst_datetime
+
 
 def get_night_window(date: date) -> tuple[datetime, datetime]:
     """
-    Return night datetime window for that day
+    Return night datetime window for that day in Cape Town.
+    
+    Parameters:
+    date (date): The date for which to calculate the night window.
+    
+    Returns:
+    tuple[datetime, datetime]: Start and end datetime of the night window.
     """
-    start_datetime: datetime = datetime(date)
-    start_datetime.hour = 18
-    end_datetime: datetime = datetime(date)
-    end_datetime.day += 1
-    end_datetime.hour = 6
+    # Start of the night at 18:00 (6 PM)
+    start_datetime = datetime(date.year, date.month, date.day, 18, 0, 0)
+    
+    # End of the night at 06:00 (6 AM) the next day
+    end_datetime = start_datetime + timedelta(hours=12)  # 18:00 to 06:00 next day
+
     return (start_datetime, end_datetime)
 
 def get_sunrise_sunset(date: date) -> tuple[datetime, datetime]:
     """
-    Return sunrise and sunset datetime for that day
+    Return sunrise and sunset datetime for that day in Cape Town.
+    
+    Parameters:
+    date (date): The date for which to calculate sunrise and sunset.
+    
+    Returns:
+    tuple[datetime, datetime]: Sunrise and sunset datetime objects.
     """
-    sunrise_datetime: datetime = datetime(date)
-    sunrise_datetime.hour = 6
-    sunset_datetime: datetime = datetime(date)
-    sunset_datetime.hour = 18
+    # Set average sunrise and sunset times
+    sunrise_datetime = datetime(date.year, date.month, date.day, 6, 0, 0)  # 6:00 AM
+    sunset_datetime = datetime(date.year, date.month, date.day, 18, 0, 0)  # 6:00 PM
     return sunrise_datetime, sunset_datetime
+
 
 
 class Timetable:
@@ -154,7 +195,7 @@ class Timetable:
         penalty_factor: float = penalty_factors[0]
         """
         List of contraints
-            - 1. Check for proposal score/priority
+            - 1. Check for proposal score/priority SCI
             - 2. Check LST start - start end window
             - 3. Check for gaps between scheduled proposals
             - 4. Check for partially allocated proposals
@@ -164,6 +205,7 @@ class Timetable:
         """
         for schedule in self.schedules:
             t_id, p_id = schedule
+            unique_proposal_ids: list[int] = list()
             if p_id is not None and p_id == proposal_id:
                 timeslot = get_timeslot_by_id(t_id)
                 proposal = get_proposal_by_id(p_id)
@@ -172,12 +214,13 @@ class Timetable:
                 penalty_factor = penalty_factors[proposal.get_score() - 1]
 
                 # 2. Check LST start - start end window
-                start_time: time = uct_to_lst(timeslot.start_time)
-                start_end_time: time = uct_to_lst(timeslot.start_time)
-                timeslot_start_time: time = time(timeslot.start_time)
-                if not (start_time <= timeslot_start_time and start_end_time >= timeslot_start_time):
-                    midpoint_start_time: time = (start_time + start_end_time) / 2
-                    penalty * (penalty_factor ** abs(midpoint_start_time - timeslot_start_time))
+                start_time: datetime = utc_to_lst(timeslot.start_time)
+                start_end_time: datetime = utc_to_lst(timeslot.start_time)
+                timeslot_start_time: datetime = utc_to_lst(timeslot.start_time)
+                if not (start_time <= timeslot_start_time and start_end_time >= timeslot_start_time) and (proposal.id not in unique_proposal_ids):
+                    midpoint_start_time: datetime = (start_time + start_end_time) / 2
+                    penalty *= penalty_factor ** abs((midpoint_start_time - timeslot_start_time).total_seconds())
+                    unique_proposal_ids.append(proposal.id)
 
                 # 3. Checking gaps between scheduled proposals
                 proposal_timeslot_indexes = self.get_proposal_timeslot_indexes(proposal_id)
@@ -188,17 +231,33 @@ class Timetable:
         
 
                 # 5. Check for night obs.
-                night_start_datetime, night_end_datetime = get_night_window(date(timeslot.start_time))
-                if not (night_start_datetime <= timeslot.start_time and night_end_datetime >= timeslot.end_time):
-                    night_mindpoint_datetime = (night_start_datetime + night_end_datetime) / 2
-                    timeslot_midpoint_datetime = (timeslot.start_time + timeslot.end_time) / 2
-                    penalty *= (penalty_factor ** abs(timeslot_midpoint_datetime - night_mindpoint_datetime))
+                night_start_datetime, night_end_datetime = get_night_window(timeslot.start_time.date())
 
-                # 6. Check for avoid sunset/sunrise
-                if proposal.avoid_sunrise_sunset:
-                    sunrise_datetime, sunset_datetime = get_sunrise_sunset(date(timeslot.start_time))
-                    if (timeslot.start_time <= sunrise_datetime and timeslot.end_time >= sunrise_datetime) or (timeslot.start_time <= sunset_datetime and timeslot.end_time >= sunset_datetime):
-                        penalty *= penalty_factor
+                # Check if the proposal requires night observation and if the timeslot is outside the night window
+                if proposal.night_obs and not (night_start_datetime <= timeslot.start_time <= night_end_datetime):
+                    # Calculate the midpoint of the night window
+                    night_midpoint_datetime = night_start_datetime + (night_end_datetime - night_start_datetime) / 2
+                    
+                    # Calculate the midpoint of the timeslot
+                    timeslot_midpoint_datetime = timeslot.start_time + (timeslot.end_time - timeslot.start_time) / 2
+                    
+                    # Calculate the penalty based on the difference from the night midpoint
+                    penalty *= (penalty_factor ** abs((timeslot_midpoint_datetime - night_midpoint_datetime).total_seconds()))
+
+                    # 6. Check for avoid sunset/sunrise
+                    if proposal.avoid_sunrise_sunset:
+                        sunrise_datetime, sunset_datetime = get_sunrise_sunset(timeslot.start_time.date())
+                        
+                        # Create a list of sunrise and sunset datetimes
+                        sun_events = [sunrise_datetime, sunset_datetime]
+
+                        # Check if timeslot overlaps with any sun event
+                        for event_datetime in sun_events:
+                            if timeslot.start_time <= event_datetime <= timeslot.end_time:
+                                # Apply penalty based on the difference between the midpoint and the clashing event
+                                penalty *= penalty_factor ** abs((timeslot_midpoint_datetime - event_datetime).total_seconds())
+                                #break  # Exit loop after applying penalty for the first overlapping event
+
 
 
                 # 7. Check for min antenna *
@@ -270,19 +329,19 @@ class Timetable:
                 time_index = timeslot.start_time.hour
 
                 # Determine the color based on the proposal ID
-                color = f'C{proposal.id % 10}'
+                color = f'C{PROPOSALS.index(proposal)}'
 
                 # Add a rectangle for the proposal
-                rect = matplotlib.patches.Rectangle(((weekday + 1) % 7, time_index), 1, 1, facecolor=color, alpha=0.5, edgecolor='black', linewidth=2)
+                rect = matplotlib.patches.Rectangle(((weekday + 1) % 7, time_index), 1, 1, facecolor=color, alpha=0.5, edgecolor='black', linewidth=1)
                 ax.add_patch(rect)
 
                
-                ax.text((weekday + 1) % 7 + 0.5, time_index + 0.5, str(proposal.owner_email), ha='center', va='center', color='white')
+                ax.text((weekday + 1) % 7 + 0.5, time_index + 0.5, str(PROPOSALS.index(proposal)), ha='center', va='center', color='white')
 
         # Add a legend
-        legend_patches = [plt.Rectangle((0, 0), 1, 1, facecolor=f'C{i}', alpha=0.5, edgecolor='black', linewidth=2) for i in range(len(unique_proposals))]
-        legend_labels = [f'Proposal {i}' for i in unique_proposals]
-        ax.legend(legend_patches, legend_labels, loc='upper left', bbox_to_anchor=(1.05, 1))
+        #legend_patches = [plt.Rectangle((0, 0), 1, 1, facecolor=f'C{i}', alpha=0.5, edgecolor='black', linewidth=2) for i in range(len(unique_proposals))]
+        #legend_labels = [f'Proposal {i}' for i in unique_proposals]
+        #ax.legend(legend_patches, legend_labels, loc='upper left', bbox_to_anchor=(1.05, 1))
 
         # Set the title and axis labels
         ax.set_title('Timetable')
@@ -374,9 +433,22 @@ class GeneticAlgorithm():
         return
 
     def print_fitness(self, generation: int) -> None:
+        # Calculate fitness scores for the first up to 5 timetables
         fitness_scores = [timetable.score() for timetable in self.timetables[:min(5, len(self.timetables))]]
+        
+        # Sort fitness scores in descending order
+        sorted_scores = sorted(fitness_scores, reverse=True)
+
+        # Get the first two fittest and the last two least fittest
+        fittest_two = sorted_scores[:2]  # First two (fittest)
+        least_fittest_two = sorted_scores[-2:]  # Last two (least fittest)
+
+        # Print the results
         print(f"Generation {generation + 1}:\t", end="")
-        print(", ".join(f"{score:3.2f}" for score in fitness_scores))
+        print(", ".join(f"{score:3.2f}" for score in fittest_two), end=", ..., ")
+        print(", ".join(f"{score:3.2f}" for score in least_fittest_two))
+
+
 
     def get_best_fit_timetable(self) -> Timetable:
         # Sort timetables by score and return the best one
@@ -414,7 +486,7 @@ def main():
     """
 
     print("Generating Timetable using Genetic Algorithim")
-    genetic_algorithm: GeneticAlgorithm = GeneticAlgorithm(10, 1000)
+    genetic_algorithm: GeneticAlgorithm = GeneticAlgorithm(10, 2500)
     best_timetable: Timetable = genetic_algorithm.get_best_fit_timetable()
     best_timetable.display()
 
