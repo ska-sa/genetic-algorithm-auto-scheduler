@@ -303,7 +303,7 @@ class Timetable:
                     timeslot_midpoint_datetime = timeslot.start_time + (timeslot.end_time - timeslot.start_time) / 2
                     
                     # Calculate the penalty based on the difference from the night midpoint
-                    #penalty *= (penalty_factor ** abs((timeslot_midpoint_datetime - night_midpoint_datetime).total_seconds() / (60 * 60)))
+                    penalty *= (penalty_factor ** abs((timeslot_midpoint_datetime - night_midpoint_datetime).total_seconds() / (60 * 60)))
 
                     # 6. Check for avoid sunset/sunrise
                     if proposal.avoid_sunrise_sunset:
