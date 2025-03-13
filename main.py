@@ -285,7 +285,7 @@ class Timetable:
 
                 # 3. Checking gaps between scheduled proposals
                 proposal_timeslot_indexes = self.get_proposal_timeslot_indexes(proposal_id)
-                #penalty *= (penalty_factor ** (abs((proposal.simulated_duration - timeslot.get_duration() * len(proposal_timeslot_indexes)) / (60 * 60)))) # Apply penalty for partially allocated proposal
+                penalty *= (penalty_factor ** (abs((proposal.simulated_duration - timeslot.get_duration() * len(proposal_timeslot_indexes)) / (60 * 60)))) # Apply penalty for partially allocated proposal
                 
                 # 4. Checking partially allocated proposals
                 #penalty *= (penalty_factor ** ((1 - (min(proposal_timeslot_indexes) + len(proposal_timeslot_indexes) - max(proposal_timeslot_indexes))) / (7 * 24 * 60 * 60))) # Apply penalty for gaps of a partially allocated proposal
