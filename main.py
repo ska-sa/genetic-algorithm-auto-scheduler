@@ -280,7 +280,7 @@ class Timetable:
                     # Calculate the midpoint
                     midpoint_start_time: datetime = start_time + (start_end_time - start_time) / 2
                     
-                    #penalty *= penalty_factor ** abs((midpoint_start_time - timeslot_start_time).total_seconds() / (60 * 60))
+                    penalty *= penalty_factor ** abs((midpoint_start_time - timeslot_start_time).total_seconds() / (60 * 60))
                     unique_proposal_ids.append(proposal.id)
 
                 # 3. Checking gaps between scheduled proposals
