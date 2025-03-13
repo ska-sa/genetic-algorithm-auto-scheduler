@@ -316,7 +316,7 @@ class Timetable:
                         for event_datetime in sun_events:
                             if timeslot.start_time <= event_datetime <= timeslot.end_time:
                                 # Apply penalty based on the difference between the midpoint and the clashing event
-                                #penalty *= penalty_factor ** abs((timeslot_midpoint_datetime - event_datetime).total_seconds() / (60 * 60))
+                                penalty *= penalty_factor ** abs((timeslot_midpoint_datetime - event_datetime).total_seconds() / (60 * 60))
                                 break  # Exit loop after applying penalty for the first overlapping event
 
 
