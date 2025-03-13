@@ -53,18 +53,19 @@ def read_proposals_from_csv(file_path: str) -> list[Proposal]:
                 prefered_dates_end,
                 avoid_dates_start,
                 avoid_dates_end,
-                bool(row['night_obs']),
-                bool(row['avoid_sunrise_sunset']),
+                True if str(row['night_obs']).capitalize() == "Yes" else False,
+                True if str(row['avoid_sunrise_sunset']).capitalize == "Yes" else False,
                 int(row['minimum_antennas']),
                 Proposal.parse_time(row['lst_start']),
                 Proposal.parse_time(row['lst_start_end']),
                 int(row['simulated_duration']),
-                random.randint(1,  4) #float(row['score'])
+                get_score(str(row['proposal_id']))
             ))
-            if i == 20:
-                break
+
     return proposals
 
+def get_score(proposal_id: str):
+    return random.randint(1, 4) # In future we have to classify proposals to get their actual rates
 
 def generate_timeslots(start_date: date, end_date: date, timeslot_duration: int = 60 * 60) -> list[Timeslot]:
     timeslots = []
@@ -177,8 +178,15 @@ class Timetable:
     def generate(self) -> None:
         global TIMESLOTS, PROPOSALS
         for timeslot in TIMESLOTS:
+            proposal_id: int = None
+            if random.random() < 0.75:
+                for _ in range(6):
+                    proposal: Proposal = random.choice(PROPOSALS)
+                    if self.all_hard_contraints_met(timeslot, proposal):
+                        proposal_id = proposal.id
+                        break
             self.schedules.append(
-                [timeslot.id, (random.choice(PROPOSALS).id if random.random() > 0.25 else None)]
+                [timeslot.id, proposal_id]
             )
         return
 
@@ -188,6 +196,56 @@ class Timetable:
             if schedule[1] == proposal_id:
                 timeslot_indexes.append(i)
         return timeslot_indexes
+    
+    def all_hard_contraints_met(self, timeslot: Timeslot, proposal: Proposal):
+        return self.is_avoid_sunrise_sunset_cosnstraint_met(timeslot, proposal) and self.is_night_obs_contraint_met(timeslot, proposal) and self.is_lst_start_start_end_contraint_met(timeslot, proposal) and self.is_over_schedule_contraint_met(timeslot, proposal)
+
+    def is_avoid_sunrise_sunset_cosnstraint_met(self, timeslot: Timeslot, proposal: Proposal):
+        if proposal.avoid_sunrise_sunset:
+            sunrise_datetime, sunset_datetime = get_sunrise_sunset(timeslot.start_time.date())
+            
+            # Create a list of sunrise and sunset datetimes
+            sun_events = [sunrise_datetime, sunset_datetime]
+
+            # Check if timeslot overlaps with any sun event
+            for event_datetime in sun_events:
+                if timeslot.start_time <= event_datetime <= timeslot.end_time:
+                    return False
+        return True
+    
+    def is_lst_start_start_end_contraint_met(self, timeslot: Timeslot, proposal: Proposal):
+        if len(self.schedules) == len(TIMESLOTS):
+            start_time: datetime = utc_to_lst(datetime.combine(timeslot.start_time.date(), proposal.lst_start_time))
+            start_end_time: datetime = utc_to_lst(datetime.combine(timeslot.start_time.date(), proposal.lst_start_end_time))
+            
+            timeslot_start_time: datetime = utc_to_lst(timeslot.start_time)
+
+            timeslot_id = timeslot.id
+            proposal_id = proposal.id
+
+            try:
+                timeslot_index: int = [schedule[0] for schedule in self.schedules].index(timeslot_id)
+                proposal_index: int = [schedule[1] for schedule in self.schedules].index(proposal_id)
+            except:
+                return True
+
+
+            if not (start_time <= timeslot_start_time and start_end_time >= timeslot_start_time) and (timeslot_index == proposal_index):
+                return False
+        return True
+    
+    def is_night_obs_contraint_met(self, timeslot: Timeslot, proposal: Proposal):
+        night_start_datetime, night_end_datetime = get_night_window(timeslot.start_time.date())
+        if proposal.night_obs and not (night_start_datetime <= timeslot.start_time <= night_end_datetime):
+            return False
+        return True
+    
+    def is_over_schedule_contraint_met(self, timeslot: Timeslot, proposal: Proposal):
+        num_of_timeslots: int = [schedule[1] for schedule in self.schedules].count(proposal.id)
+        if num_of_timeslots * timeslot.get_duration() >= proposal.simulated_duration:
+            return False
+        return True
+
 
     def compute_penalty(self, proposal_id) -> float:
         penalty: float = 1
@@ -214,20 +272,23 @@ class Timetable:
                 penalty_factor = penalty_factors[proposal.get_score() - 1]
 
                 # 2. Check LST start - start end window
-                start_time: datetime = utc_to_lst(timeslot.start_time)
-                start_end_time: datetime = utc_to_lst(timeslot.start_time)
+                start_time: datetime = utc_to_lst(datetime.combine(timeslot.start_time.date(), proposal.lst_start_time))
+                start_end_time: datetime = utc_to_lst(datetime.combine(timeslot.start_time.date(), proposal.lst_start_end_time))
+
                 timeslot_start_time: datetime = utc_to_lst(timeslot.start_time)
                 if not (start_time <= timeslot_start_time and start_end_time >= timeslot_start_time) and (proposal.id not in unique_proposal_ids):
-                    midpoint_start_time: datetime = (start_time + start_end_time) / 2
-                    penalty *= penalty_factor ** abs((midpoint_start_time - timeslot_start_time).total_seconds())
+                    # Calculate the midpoint
+                    midpoint_start_time: datetime = start_time + (start_end_time - start_time) / 2
+                    
+                    #penalty *= penalty_factor ** abs((midpoint_start_time - timeslot_start_time).total_seconds() / (60 * 60))
                     unique_proposal_ids.append(proposal.id)
 
                 # 3. Checking gaps between scheduled proposals
                 proposal_timeslot_indexes = self.get_proposal_timeslot_indexes(proposal_id)
-                penalty *= (penalty_factor ** (abs(proposal.simulated_duration - timeslot.get_duration() * len(proposal_timeslot_indexes)) / (7 * 24 * 60 * 60))) # Apply penalty for partially allocated proposal
+                #penalty *= (penalty_factor ** (abs((proposal.simulated_duration - timeslot.get_duration() * len(proposal_timeslot_indexes)) / (60 * 60)))) # Apply penalty for partially allocated proposal
                 
                 # 4. Checking partially allocated proposals
-                penalty *= (penalty_factor ** ((1 - (min(proposal_timeslot_indexes) + len(proposal_timeslot_indexes) - max(proposal_timeslot_indexes))) / (7 * 24 * 60 * 60))) # Apply penalty for gaps of a partially allocated proposal
+                #penalty *= (penalty_factor ** ((1 - (min(proposal_timeslot_indexes) + len(proposal_timeslot_indexes) - max(proposal_timeslot_indexes))) / (7 * 24 * 60 * 60))) # Apply penalty for gaps of a partially allocated proposal
         
 
                 # 5. Check for night obs.
@@ -242,7 +303,7 @@ class Timetable:
                     timeslot_midpoint_datetime = timeslot.start_time + (timeslot.end_time - timeslot.start_time) / 2
                     
                     # Calculate the penalty based on the difference from the night midpoint
-                    penalty *= (penalty_factor ** abs((timeslot_midpoint_datetime - night_midpoint_datetime).total_seconds()))
+                    #penalty *= (penalty_factor ** abs((timeslot_midpoint_datetime - night_midpoint_datetime).total_seconds() / (60 * 60)))
 
                     # 6. Check for avoid sunset/sunrise
                     if proposal.avoid_sunrise_sunset:
@@ -255,8 +316,8 @@ class Timetable:
                         for event_datetime in sun_events:
                             if timeslot.start_time <= event_datetime <= timeslot.end_time:
                                 # Apply penalty based on the difference between the midpoint and the clashing event
-                                penalty *= penalty_factor ** abs((timeslot_midpoint_datetime - event_datetime).total_seconds())
-                                #break  # Exit loop after applying penalty for the first overlapping event
+                                #penalty *= penalty_factor ** abs((timeslot_midpoint_datetime - event_datetime).total_seconds() / (60 * 60))
+                                break  # Exit loop after applying penalty for the first overlapping event
 
 
 
@@ -289,7 +350,14 @@ class Timetable:
         num_of_mutable_schedules: int = int(len(self.schedules) * mutation_rate)
         for _ in range(num_of_mutable_schedules):
             mutation_index = random.randint(0, len(self.schedules) - 1)
-            self.schedules[mutation_index] =  list([self.schedules[mutation_index][0], random.choice(PROPOSALS).id if random.random() > 0.25 else None])
+            proposal_id: int = None
+            timeslot_id: int = self.schedules[mutation_index][0]
+            if random.random() < 0.75:
+                for _ in range(6):
+                    proposal: Proposal = random.choice(PROPOSALS)
+                    if self.all_hard_contraints_met(get_timeslot_by_id(timeslot_id), proposal):
+                        proposal_id = proposal.id
+            self.schedules[mutation_index] =  list([timeslot_id, proposal_id])
 
           
     def remove_partialy_allocated_proposals(self) -> None:
@@ -317,8 +385,8 @@ class Timetable:
         owner_colors = {}
         unique_proposals = []
         for i, (timeslot_id, proposal_id) in enumerate(self.schedules):
-            timeslot = get_timeslot_by_id(timeslot_id)
-            proposal = get_proposal_by_id(proposal_id)
+            timeslot: Timeslot = get_timeslot_by_id(timeslot_id)
+            proposal: Proposal = get_proposal_by_id(proposal_id)
             if proposal:
                 # Check if proposal doesn't exist in our unique proposals list
                 if proposal.id not in unique_proposals:
@@ -336,7 +404,7 @@ class Timetable:
                 ax.add_patch(rect)
 
                
-                ax.text((weekday + 1) % 7 + 0.5, time_index + 0.5, str(PROPOSALS.index(proposal)), ha='center', va='center', color='white')
+                ax.text((weekday + 1) % 7 + 0.5, time_index + 0.5, proposal.owner_email, ha='center', va='center', color='white')
 
         # Add a legend
         #legend_patches = [plt.Rectangle((0, 0), 1, 1, facecolor=f'C{i}', alpha=0.5, edgecolor='black', linewidth=2) for i in range(len(unique_proposals))]
@@ -360,7 +428,7 @@ class Timetable:
                 print(f"{timeslot.start_time.strftime('%d %B %Y')}")
             print(f"\t{timeslot.start_time.strftime('%H:%M')} - {timeslot.end_time.strftime('%H:%M')}\t", end="")
             if proposal:
-                print(proposal.owner_email, proposal.simulated_duration)
+                print(proposal.owner_email, proposal.simulated_duration // (60 * 60))
             else:
                 print("")
 
