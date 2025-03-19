@@ -9,7 +9,7 @@ from classes.proposal import Proposal
 
 TIMESLOTS: list[Timeslot] = list()
 PROPOSALS: list[Proposal] = list()
-TIME_RESOLUTION: int = 60 
+TIME_RESOLUTION: int = 60 * 60
 
 
 def read_proposals_from_csv(file_path: str) -> list[Proposal]:
@@ -285,11 +285,12 @@ class Timetable:
                     
                     #penalty = 0 # For hard contraints
                     penalty *= (penalty_factor * 0.1) ** abs((midpoint_start_time - timeslot_start_time).total_seconds() / TIME_RESOLUTION)
-                    unique_proposal_ids.append(proposal.id)
+                    
 
                 # 3. Checking gaps between scheduled proposals
                 proposal_timeslot_indexes = self.get_proposal_timeslot_indexes(proposal_id)
-                penalty *= ((penalty_factor * 0.5) ** (abs((proposal.simulated_duration - timeslot.get_duration() * len(proposal_timeslot_indexes)) / TIME_RESOLUTION))) # Apply penalty for partially allocated proposal
+                if proposal.id not in unique_proposal_ids:
+                    penalty *= ((penalty_factor * 0.5) ** (abs((proposal.simulated_duration - timeslot.get_duration() * len(proposal_timeslot_indexes)) / TIME_RESOLUTION))) # Apply penalty for partially allocated proposal
                 
                 # 4. Checking partially allocated proposals
                 penalty *= (penalty_factor ** ((1 - (min(proposal_timeslot_indexes) + len(proposal_timeslot_indexes) - max(proposal_timeslot_indexes))) / TIME_RESOLUTION)) # Apply penalty for gaps of a partially allocated proposal
@@ -329,6 +330,9 @@ class Timetable:
 
                 # 7. Check for min antenna *
                 pass
+
+                if proposal.id not in unique_proposal_ids:
+                    unique_proposal_ids.append(proposal.id)
 
         return penalty
     
@@ -494,14 +498,14 @@ class GeneticAlgorithm():
             parent_timetable_1: Timetable = random.choice(elite_timetables)
             parent_timetable_2: Timetable = random.choice(elite_timetables)
             #self.timetables[index] = None
-            num_offsprings: int = random.randint(2, 10)
+            num_offsprings: int = random.randint(5, 10)
             offsprings: list[Timetable] = list()
             for _ in range(num_offsprings):
                 offspring: Timetable = Timetable(parent_timetable_1.crossover(parent_timetable_2.schedules))
                 offspring.mutation()
                 offsprings.append(offspring)
             offsprings.sort(key=lambda timetable: timetable.score(), reverse=True)
-            offsprint_timetable: Timetable = random.choice(offsprings[:int(num_offsprings * 0.5)])
+            offsprint_timetable: Timetable = random.choice(offsprings[:int(num_offsprings * 0.3)])
             #offsprint_timetable.mutation()
             self.timetables[index] = offsprint_timetable
             #self.timetables[index].mutation()
