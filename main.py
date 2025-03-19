@@ -9,6 +9,8 @@ from classes.proposal import Proposal
 
 TIMESLOTS: list[Timeslot] = list()
 PROPOSALS: list[Proposal] = list()
+TIME_RESOLUTION: int = 60 * 60
+
 
 def read_proposals_from_csv(file_path: str) -> list[Proposal]:
     proposals = []
@@ -248,6 +250,7 @@ class Timetable:
 
 
     def compute_penalty(self, proposal_id) -> float:
+        global TIME_RESOLUTION
         penalty: float = 1
         penalty_factors: list[float] = list([0.95, 0.90, 0.85, 0.80])
         penalty_factor: float = penalty_factors[0]
@@ -280,15 +283,16 @@ class Timetable:
                     # Calculate the midpoint
                     midpoint_start_time: datetime = start_time + (start_end_time - start_time) / 2
                     
-                    penalty *= penalty_factor ** abs((midpoint_start_time - timeslot_start_time).total_seconds() / (60 * 60))
+                    #penalty = 0 # For hard contraints
+                    penalty *= (penalty_factor * 0.1) ** abs((midpoint_start_time - timeslot_start_time).total_seconds() / TIME_RESOLUTION)
                     unique_proposal_ids.append(proposal.id)
 
                 # 3. Checking gaps between scheduled proposals
                 proposal_timeslot_indexes = self.get_proposal_timeslot_indexes(proposal_id)
-                penalty *= (penalty_factor ** (abs((proposal.simulated_duration - timeslot.get_duration() * len(proposal_timeslot_indexes)) / (60 * 60)))) # Apply penalty for partially allocated proposal
+                penalty *= ((penalty_factor * 0.5) ** (abs((proposal.simulated_duration - timeslot.get_duration() * len(proposal_timeslot_indexes)) / TIME_RESOLUTION))) # Apply penalty for partially allocated proposal
                 
                 # 4. Checking partially allocated proposals
-                penalty *= (penalty_factor ** ((1 - (min(proposal_timeslot_indexes) + len(proposal_timeslot_indexes) - max(proposal_timeslot_indexes))) / (7 * 24 * 60 * 60))) # Apply penalty for gaps of a partially allocated proposal
+                penalty *= (penalty_factor ** ((1 - (min(proposal_timeslot_indexes) + len(proposal_timeslot_indexes) - max(proposal_timeslot_indexes))) / TIME_RESOLUTION)) # Apply penalty for gaps of a partially allocated proposal
         
 
                 # 5. Check for night obs.
@@ -303,7 +307,8 @@ class Timetable:
                     timeslot_midpoint_datetime = timeslot.start_time + (timeslot.end_time - timeslot.start_time) / 2
                     
                     # Calculate the penalty based on the difference from the night midpoint
-                    penalty *= (penalty_factor ** abs((timeslot_midpoint_datetime - night_midpoint_datetime).total_seconds() / (60 * 60)))
+                    penalty *= ((penalty_factor * 0.1) ** abs((timeslot_midpoint_datetime - night_midpoint_datetime).total_seconds() / TIME_RESOLUTION))
+                    #penalty = 0 # For hard contraints
 
                     # 6. Check for avoid sunset/sunrise
                     if proposal.avoid_sunrise_sunset:
@@ -316,7 +321,8 @@ class Timetable:
                         for event_datetime in sun_events:
                             if timeslot.start_time <= event_datetime <= timeslot.end_time:
                                 # Apply penalty based on the difference between the midpoint and the clashing event
-                                penalty *= penalty_factor ** abs((timeslot_midpoint_datetime - event_datetime).total_seconds() / (60 * 60))
+                                #penalty = 0 # For hard contraints
+                                penalty *= (penalty_factor * 0.1) ** abs((timeslot_midpoint_datetime - event_datetime).total_seconds() / TIME_RESOLUTION)
                                 break  # Exit loop after applying penalty for the first overlapping event
 
 
@@ -488,8 +494,15 @@ class GeneticAlgorithm():
             parent_timetable_1: Timetable = random.choice(elite_timetables)
             parent_timetable_2: Timetable = random.choice(elite_timetables)
             #self.timetables[index] = None
-            offsprint_timetable: Timetable = Timetable(parent_timetable_1.crossover(parent_timetable_2.schedules))
-            offsprint_timetable.mutation()
+            num_offsprings: int = random.randint(2, 10)
+            offsprings: list[Timetable] = list()
+            for _ in range(num_offsprings):
+                offspring: Timetable = Timetable(parent_timetable_1.crossover(parent_timetable_2.schedules))
+                offspring.mutation()
+                offsprings.append(offspring)
+            offsprings.sort(key=lambda timetable: timetable.score(), reverse=True)
+            offsprint_timetable: Timetable = random.choice(offsprings[:int(num_offsprings * 0.5)])
+            #offsprint_timetable.mutation()
             self.timetables[index] = offsprint_timetable
             #self.timetables[index].mutation()
 
@@ -527,7 +540,14 @@ class GeneticAlgorithm():
 
 def main():
     global TIMESLOTS, PROPOSALS
-    PROPOSALS = read_proposals_from_csv('./proposals/csv/ObsList1737538994939.csv')
+    proposals: list[Proposal] = read_proposals_from_csv('./proposals/csv/ObsList1737538994939.csv')
+    total_week_duration: int = 60 * 60 * 24
+    cumulative_week_duration: int = 0
+    for proposal in proposals:
+        cumulative_week_duration += proposal.simulated_duration
+        if cumulative_week_duration >= total_week_duration * 2:
+            break
+        PROPOSALS.append(proposal)
     TIMESLOTS = generate_timeslots(date.fromisoformat("2025-02-09"), date.fromisoformat("2025-02-15"))
 
     """
@@ -554,7 +574,7 @@ def main():
     """
 
     print("Generating Timetable using Genetic Algorithim")
-    genetic_algorithm: GeneticAlgorithm = GeneticAlgorithm(10, 2500)
+    genetic_algorithm: GeneticAlgorithm = GeneticAlgorithm(10, 5000)
     best_timetable: Timetable = genetic_algorithm.get_best_fit_timetable()
     best_timetable.display()
 
