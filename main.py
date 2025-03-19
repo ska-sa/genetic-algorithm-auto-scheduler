@@ -9,7 +9,7 @@ from classes.proposal import Proposal
 
 TIMESLOTS: list[Timeslot] = list()
 PROPOSALS: list[Proposal] = list()
-TIME_RESOLUTION: int = 60 * 60
+TIME_RESOLUTION: int = 60 
 
 
 def read_proposals_from_csv(file_path: str) -> list[Proposal]:
@@ -574,7 +574,7 @@ def main():
     """
 
     print("Generating Timetable using Genetic Algorithim")
-    genetic_algorithm: GeneticAlgorithm = GeneticAlgorithm(10, 5000)
+    genetic_algorithm: GeneticAlgorithm = GeneticAlgorithm(10, 500)
     best_timetable: Timetable = genetic_algorithm.get_best_fit_timetable()
     best_timetable.display()
 
