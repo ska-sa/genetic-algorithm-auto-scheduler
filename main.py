@@ -355,7 +355,7 @@ class Timetable:
             offspring_schedules.append(schedule_1 if random.random() > 0.5 else schedule_2)
         return offspring_schedules
     
-    def mutation(self, mutation_rate=0.1) -> None:
+    def mutation(self, mutation_rate=0.2) -> None:
         global PROPOSALS
         num_of_mutable_schedules: int = int(len(self.schedules) * mutation_rate)
         for _ in range(num_of_mutable_schedules):
@@ -502,7 +502,7 @@ class GeneticAlgorithm():
             offsprings: list[Timetable] = list()
             for _ in range(num_offsprings):
                 offspring: Timetable = Timetable(parent_timetable_1.crossover(parent_timetable_2.schedules))
-                offspring.mutation()
+                offspring.mutation(mutation_rate=0.3)
                 offsprings.append(offspring)
             offsprings.sort(key=lambda timetable: timetable.score(), reverse=True)
             offsprint_timetable: Timetable = random.choice(offsprings[:int(num_offsprings * 0.3)])
@@ -578,7 +578,7 @@ def main():
     """
 
     print("Generating Timetable using Genetic Algorithim")
-    genetic_algorithm: GeneticAlgorithm = GeneticAlgorithm(10, 500)
+    genetic_algorithm: GeneticAlgorithm = GeneticAlgorithm(10, 3000)
     best_timetable: Timetable = genetic_algorithm.get_best_fit_timetable()
     best_timetable.display()
 
