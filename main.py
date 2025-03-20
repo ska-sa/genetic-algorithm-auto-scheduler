@@ -254,6 +254,10 @@ class Timetable:
         penalty: float = 1
         penalty_factors: list[float] = list([0.95, 0.90, 0.85, 0.80])
         penalty_factor: float = penalty_factors[0]
+
+        scheduled_time: float = 0.0
+        requested_time: float = 0.0
+
         """
         List of contraints
             - 1. Check for proposal score/priority SCI
@@ -331,9 +335,15 @@ class Timetable:
                 # 7. Check for min antenna *
                 pass
 
+                
+                if proposal_id is not None:
+                    scheduled_time += timeslot.get_duration()
                 if proposal.id not in unique_proposal_ids:
+                    requested_time += proposal.simulated_duration
                     unique_proposal_ids.append(proposal.id)
-
+        # 8. Compared scheduled used time with requestsed time
+        penalty *= scheduled_time / requested_time
+        
         return penalty
     
     def score(self):
@@ -498,14 +508,14 @@ class GeneticAlgorithm():
             parent_timetable_1: Timetable = random.choice(elite_timetables)
             parent_timetable_2: Timetable = random.choice(elite_timetables)
             #self.timetables[index] = None
-            num_offsprings: int = random.randint(5, 10)
+            num_offsprings: int = random.randint(4, 8)
             offsprings: list[Timetable] = list()
             for _ in range(num_offsprings):
                 offspring: Timetable = Timetable(parent_timetable_1.crossover(parent_timetable_2.schedules))
-                offspring.mutation(mutation_rate=0.3)
+                offspring.mutation(mutation_rate=0.2)
                 offsprings.append(offspring)
             offsprings.sort(key=lambda timetable: timetable.score(), reverse=True)
-            offsprint_timetable: Timetable = random.choice(offsprings[:int(num_offsprings * 0.3)])
+            offsprint_timetable: Timetable = random.choice(offsprings[:max(2, int(num_offsprings * 0.4))])
             #offsprint_timetable.mutation()
             self.timetables[index] = offsprint_timetable
             #self.timetables[index].mutation()
@@ -578,7 +588,7 @@ def main():
     """
 
     print("Generating Timetable using Genetic Algorithim")
-    genetic_algorithm: GeneticAlgorithm = GeneticAlgorithm(10, 3000)
+    genetic_algorithm: GeneticAlgorithm = GeneticAlgorithm(20, 1000)
     best_timetable: Timetable = genetic_algorithm.get_best_fit_timetable()
     best_timetable.display()
 
