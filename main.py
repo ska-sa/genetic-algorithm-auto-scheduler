@@ -588,7 +588,7 @@ def main():
     """
 
     print("Generating Timetable using Genetic Algorithim")
-    genetic_algorithm: GeneticAlgorithm = GeneticAlgorithm(20, 1000)
+    genetic_algorithm: GeneticAlgorithm = GeneticAlgorithm(20, 10000)
     best_timetable: Timetable = genetic_algorithm.get_best_fit_timetable()
     best_timetable.display()
 
