@@ -9,7 +9,6 @@ from classes.proposal import Proposal
 
 TIMESLOTS: list[Timeslot] = list()
 PROPOSALS: list[Proposal] = list()
-TIME_RESOLUTION: int = 60 * 60
 
 
 def read_proposals_from_csv(file_path: str) -> list[Proposal]:
