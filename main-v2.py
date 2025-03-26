@@ -167,37 +167,79 @@ def get_sunrise_sunset(date: date) -> tuple[datetime, datetime]:
     return sunrise_datetime, sunset_datetime
 
 
-
 class Timetable:
-    def __init__(self, schedules: list[list[int]] = list()):
-        self.schedules = list()
-        if schedules == list():
+    def __init__(self, schedules: list[list[int]] = None):
+        if schedules is None:
+            self.schedules = []
             self.generate()
         else:
             self.schedules = schedules
 
+    def generate_datetime(self, proposal_id: int, 
+                          min_datetime: datetime = datetime(2025, 2, 9, 0, 0, 0), 
+                          max_datetime: datetime = datetime(2025, 2, 15, 23, 59, 59)) -> datetime:
+        while True:
+            # Generate a random date between min_datetime and max_datetime
+            random_timestamp = random.randint(int(min_datetime.timestamp()), int(max_datetime.timestamp()))
+            start_datetime = datetime.fromtimestamp(random_timestamp)
+
+            # Check if all constraints are met
+            if self.all_constraints_met(proposal_id):
+                return start_datetime 
+
     def generate(self) -> None:
-        global TIMESLOTS, PROPOSALS
-        for timeslot in TIMESLOTS:
-            proposal_id: int = None
+        global PROPOSALS
+        
+        for proposal in PROPOSALS:
+            start_datetime = self.generate_datetime(proposal.id) if random.random > 0.75 else None
+            self.schedules.append([proposal.id, start_datetime])  # Append as a list
+            
+
+    def all_constraints_met(self, proposal_id: int) -> bool:
+        # Placeholder for actual constraint checking logic
+        return True  # Replace with actual logic
+    
+    def compute_score(self) -> float:
+        global PROPOSALS
+        score: float = 1
+        total_clash_time: float = 0
+        total_time: float = 0
+        for schedule in self.schedules:
+            proposal_id, start_datetime = schedule
+            if start_datetime is not None:
+                proposal: Proposal = get_proposal_by_id(proposal_id=proposal_id)
+                total_time += proposal.simulated_duration
+                for PROPOSAL in PROPOSALS:
+                    if PROPOSAL != proposal and (PROPOSAL.start_datetime - proposal.start_datetime > max(PROPOSAL.simulated_duration, proposal.simulated_duration)):
+                        clash_time = None # compute classhig time 
+                        total_clash_time += clash_time
+
+        score = total_clash_time / total_time
+        return score
+            
+    def crossover(self, schedules: list[list[int]]) -> list[list[int]]:
+        offspring_schedules: list[list[int]] = list()
+        for schedule_1, schedule_2 in zip(self.schedules, schedules):
+            offspring_schedules.append(schedule_1 if random.random() > 0.5 else schedule_2)
+        return offspring_schedules
+    
+    def mutation(self, mutation_rate=0.2) -> None:
+        global PROPOSALS
+        num_of_mutable_schedules: int = int(len(self.schedules) * mutation_rate)
+        for _ in range(num_of_mutable_schedules):
+            mutation_index = random.randint(0, len(self.schedules) - 1)
+            
+            
+            
+            timeslot_id: int = self.schedules[mutation_index][0]
             if random.random() < 0.75:
                 for _ in range(6):
                     proposal: Proposal = random.choice(PROPOSALS)
-                    if self.all_hard_contraints_met(timeslot, proposal):
+                    if self.all_hard_contraints_met(get_timeslot_by_id(timeslot_id), proposal):
                         proposal_id = proposal.id
-                        break
-            self.schedules.append(
-                [timeslot.id, proposal_id]
-            )
-        return
+            self.schedules[mutation_index] =  list([timeslot_id, proposal_id])
 
-    def get_proposal_timeslot_indexes(self, proposal_id: int) -> list[int]:
-        timeslot_indexes: list[int] = []
-        for i, schedule in enumerate(self.schedules):
-            if schedule[1] == proposal_id:
-                timeslot_indexes.append(i)
-        return timeslot_indexes
-    
+    """
     def all_hard_contraints_met(self, timeslot: Timeslot, proposal: Proposal):
         return self.is_avoid_sunrise_sunset_cosnstraint_met(timeslot, proposal) and self.is_night_obs_contraint_met(timeslot, proposal) and self.is_lst_start_start_end_contraint_met(timeslot, proposal) and self.is_over_schedule_contraint_met(timeslot, proposal)
 
@@ -248,6 +290,7 @@ class Timetable:
         return True
 
 
+
     def compute_penalty(self, proposal_id) -> float:
         global TIME_RESOLUTION
         penalty: float = 1
@@ -256,8 +299,7 @@ class Timetable:
 
         scheduled_time: float = 0.0
         requested_time: float = 0.0
-
-        """
+        
         List of contraints
             - 1. Check for proposal score/priority SCI
             - 2. Check LST start - start end window
@@ -266,7 +308,7 @@ class Timetable:
             - 5. Check for night obs.
             - 6. Check for avoid sunset/sunrise
             - 7. Check for min antenna *
-        """
+        
         for schedule in self.schedules:
             t_id, p_id = schedule
             unique_proposal_ids: list[int] = list()
@@ -381,7 +423,7 @@ class Timetable:
           
     def remove_partialy_allocated_proposals(self) -> None:
         return
-    
+    """
     def display(self) -> None:
         # Create a figure and axis
         fig, ax = plt.subplots(figsize=(24, 12))
