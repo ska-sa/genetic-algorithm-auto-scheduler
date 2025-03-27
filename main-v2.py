@@ -226,18 +226,16 @@ class Timetable:
     def mutation(self, mutation_rate=0.2) -> None:
         global PROPOSALS
         num_of_mutable_schedules: int = int(len(self.schedules) * mutation_rate)
-        for _ in range(num_of_mutable_schedules):
-            mutation_index = random.randint(0, len(self.schedules) - 1)
-            
-            
-            
-            timeslot_id: int = self.schedules[mutation_index][0]
-            if random.random() < 0.75:
-                for _ in range(6):
-                    proposal: Proposal = random.choice(PROPOSALS)
-                    if self.all_hard_contraints_met(get_timeslot_by_id(timeslot_id), proposal):
-                        proposal_id = proposal.id
-            self.schedules[mutation_index] =  list([timeslot_id, proposal_id])
+        mutation_indexes: list[int] = list()
+        while len(mutation_index) < num_of_mutable_schedules:
+            mutation_index = random.randint(0, len(self.schedules) -1)
+            if mutation_index not in mutation_indexes:
+                proposal_id = self.schedules[mutation_index][0] # Get proposal_id
+                start_datetime = self.generate_datetime(proposal_id) if random.random > 0.75 else None # Compute new start_datetinme
+                self.schedules[mutation_index][1] = start_datetime # Mutate the start_datettime at this mutation index
+                mutation_indexes.append(mutation_index)
+
+    
 
     """
     def all_hard_contraints_met(self, timeslot: Timeslot, proposal: Proposal):
