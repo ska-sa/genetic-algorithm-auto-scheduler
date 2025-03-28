@@ -6,6 +6,7 @@ import numpy as np
 from datetime import datetime, date, time, timedelta
 from classes.timeslot import Timeslot
 from classes.proposal import Proposal
+import copy
 
 PROPOSALS: list[Proposal] = list()
 MIN_DATE: date = date.today()
@@ -45,7 +46,8 @@ def read_proposals_from_csv(file_path: str) -> list[Proposal]:
             if row['minimum_antennas'] == '':
                 continue # invalid data with missing key 'minimum_antennas'
 
-
+            if int(row['simulated_duration']) == 0:
+                continue
             proposals.append(Proposal(
                 int(row['id']),
                 row['owner_email'],
@@ -170,7 +172,7 @@ def get_sunrise_sunset(date: date) -> tuple[datetime, datetime]:
 class Timetable:
     def __init__(self, schedules: list[list[int]] = None):
         if schedules is None:
-            self.schedules = []
+            self.schedules = list()
             self.generate()
         else:
             self.schedules = schedules
@@ -201,20 +203,20 @@ class Timetable:
     
     def compute_score(self) -> float:
         global PROPOSALS
-        score: float = 1
         total_clash_time: float = 0
         total_time: float = 0
+
         for schedule in self.schedules:
             proposal_id, start_datetime = schedule
             if start_datetime is not None:
-                proposal: Proposal = get_proposal_by_id(proposal_id=proposal_id)
+                proposal: Proposal = get_proposal_by_id(proposal_id)
                 total_time += proposal.simulated_duration
+                
                 for another_proposal_id, another_proposal_start_datetime in self.schedules:
                     another_proposal: Proposal = get_proposal_by_id(another_proposal_id)
                     
                     if (
                         proposal_id != another_proposal_id and
-                        start_datetime is not None and
                         another_proposal_start_datetime is not None
                     ):
                         # Calculate end times for both proposals
@@ -227,14 +229,21 @@ class Timetable:
                             clash_time = max(0, 
                                             (min(proposal_end_datetime, another_proposal_end_datetime) - 
                                             max(start_datetime, another_proposal_start_datetime)).total_seconds())
-                        else:
-                            clash_time = 0  # No clash
+                            total_clash_time += clash_time
 
-                        total_clash_time += clash_time
         total_num_proposals = len(self.schedules)
         total_num_unscheduled_proposals = [start_datetime for _, start_datetime in self.schedules].count(None)
-        score = ((total_time - total_clash_time) * (total_num_proposals - total_num_unscheduled_proposals)) / (total_time * total_num_proposals + 1e-6)
-        return score
+
+        # Simplified check for zero division
+        if total_time == 0 or total_num_proposals == 0:
+            return 0.0
+
+        # Calculate score
+        score = ((total_time - total_clash_time) * (total_num_proposals - total_num_unscheduled_proposals)) / (total_time * total_num_proposals)
+        
+        # Ensure score is non-negative
+        return max(0.0, score)
+
             
     def crossover(self, schedules: list[list[int]]) -> list[list[int]]:
         offspring_schedules: list[list[int]] = list()
@@ -245,17 +254,28 @@ class Timetable:
     def mutation(self, mutation_rate=0.2) -> None:
         global PROPOSALS
         num_of_mutable_schedules: int = int(len(self.schedules) * mutation_rate)
-        mutation_indexes: list[int] = list()
+        mutation_indexes: set[int] = set()  # Use a set for unique mutation indexes
+
+        # Create a deep copy of the schedules to avoid modifying the original
+        original_schedules = copy.deepcopy(self.schedules)
+
         while len(mutation_indexes) < num_of_mutable_schedules:
-            mutation_index = random.randint(0, len(self.schedules) -1)
+            mutation_index = random.randint(0, len(original_schedules) - 1)
+            
             if mutation_index not in mutation_indexes:
-                proposal_id = self.schedules[mutation_index][0] # Get proposal_id
-                start_datetime = self.generate_datetime(proposal_id) if random.random() > 0.75 else None # Compute new start_datetinme
-                self.schedules[mutation_index][1] = start_datetime # Mutate the start_datettime at this mutation index
-                mutation_indexes.append(mutation_index)
+                proposal_id = original_schedules[mutation_index][0]  # Get proposal_id
+                start_datetime = self.generate_datetime(proposal_id) if random.random() > 0.75 else None  # Compute new start_datetime
+                
+                # Mutate the copied schedule
+                original_schedules[mutation_index][1] = start_datetime  # Mutate the start_datetime at this mutation index
+                mutation_indexes.add(mutation_index)
+
+        # Update self.schedules with the mutated schedules
+        self.schedules = original_schedules
 
     
-
+    def remove_partialy_allocated_proposals(self) -> None:
+        return
     """
     def all_hard_contraints_met(self, timeslot: Timeslot, proposal: Proposal):
         return self.is_avoid_sunrise_sunset_cosnstraint_met(timeslot, proposal) and self.is_night_obs_contraint_met(timeslot, proposal) and self.is_lst_start_start_end_contraint_met(timeslot, proposal) and self.is_over_schedule_contraint_met(timeslot, proposal)
@@ -594,7 +614,7 @@ class GeneticAlgorithm():
         self.generate_timetables()
 
         for generation in range(num_of_generations):
-            self.timetables.sort(key=lambda timetable: timetable.score(), reverse=True)
+            self.timetables.sort(key=lambda timetable: timetable.compute_score(), reverse=True)
             self.print_fitness(generation)
             self.evolve()
             
@@ -605,9 +625,9 @@ class GeneticAlgorithm():
 
     def evolve(self, crossover_rate: float = 0.2, mutation_rate: float = 0.1) -> None:
         # Elitism: Keep the best timetables
-        self.timetables.sort(key=lambda timetable: timetable.score(), reverse=True)
+        self.timetables.sort(key=lambda timetable: timetable.compute_score(), reverse=True)
         elite_timetables: list[Timetable] = self.timetables[:int(self.num_of_timetables * 0.75)]
-        #print(self.timetables[0].score(), self.timetables[-1].score(), end="\n\n")
+        #print(self.timetables[0].compute_score(), self.timetables[-1].compute_score(), end="\n\n")
         
         
         """
@@ -622,7 +642,7 @@ class GeneticAlgorithm():
 
         self.timetables.clear()
         self.timetables.append(elite_timetables[0])
-        print(self.timetables[0].score())
+        print(self.timetables[0].compute_score())
         # Replace the old population with the new one
         for timetable in new_timetables:
             self.timetables.append(timetable)
@@ -645,7 +665,7 @@ class GeneticAlgorithm():
                 offspring: Timetable = Timetable(parent_timetable_1.crossover(parent_timetable_2.schedules))
                 offspring.mutation(mutation_rate=0.2)
                 offsprings.append(offspring)
-            offsprings.sort(key=lambda timetable: timetable.score(), reverse=True)
+            offsprings.sort(key=lambda timetable: timetable.compute_score(), reverse=True)
             offsprint_timetable: Timetable = random.choice(offsprings[:max(2, int(num_offsprings * 0.4))])
             #offsprint_timetable.mutation()
             self.timetables[index] = offsprint_timetable
@@ -660,7 +680,7 @@ class GeneticAlgorithm():
 
     def print_fitness(self, generation: int) -> None:
         # Calculate fitness scores for the first up to 5 timetables
-        fitness_scores = [timetable.score() for timetable in self.timetables[:min(5, len(self.timetables))]]
+        fitness_scores = [timetable.compute_score() for timetable in self.timetables[:min(5, len(self.timetables))]]
         
         # Sort fitness scores in descending order
         sorted_scores = sorted(fitness_scores, reverse=True)
@@ -678,7 +698,7 @@ class GeneticAlgorithm():
 
     def get_best_fit_timetable(self) -> Timetable:
         # Sort timetables by score and return the best one
-        self.timetables.sort(key=lambda timetable: timetable.score(), reverse=True)
+        self.timetables.sort(key=lambda timetable: timetable.compute_score(), reverse=True)
         self.timetables[0].remove_partialy_allocated_proposals()
         return self.timetables[0]
 
@@ -690,12 +710,12 @@ def main():
     cumulative_week_duration: int = 0
     for proposal in proposals:
         cumulative_week_duration += proposal.simulated_duration
-        if cumulative_week_duration >= total_week_duration * 2:
-            break
+        #if cumulative_week_duration >= total_week_duration * 2:
+        #    break
         PROPOSALS.append(proposal)
     TIMESLOTS = generate_timeslots(MIN_DATE, MAX_DATE)
 
-    
+    """
     print("Desplaying Randomly Generated Timetable...")
     timetable = Timetable()
     timetable.display()
@@ -719,9 +739,9 @@ def main():
     """
 
     print("Generating Timetable using Genetic Algorithim")
-    genetic_algorithm: GeneticAlgorithm = GeneticAlgorithm(20, 10000)
+    genetic_algorithm: GeneticAlgorithm = GeneticAlgorithm(10, 10000)
     best_timetable: Timetable = genetic_algorithm.get_best_fit_timetable()
     best_timetable.display()
-    """
+    
 if __name__ == "__main__":
     main()
