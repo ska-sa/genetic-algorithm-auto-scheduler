@@ -7,9 +7,9 @@ from datetime import datetime, date, time, timedelta
 from classes.timeslot import Timeslot
 from classes.proposal import Proposal
 
-TIMESLOTS: list[Timeslot] = list()
 PROPOSALS: list[Proposal] = list()
-
+MIN_DATE: date = date.today()
+MAX_DATE: date = date.today()
 
 def read_proposals_from_csv(file_path: str) -> list[Proposal]:
     proposals = []
@@ -175,6 +175,10 @@ class Timetable:
         else:
             self.schedules = schedules
 
+    def all_constraints_met(self, proposal_id: int) -> bool:
+        # Placeholder for actual constraint checking logic
+        return True  # Replace with actual logic
+
     def generate_datetime(self, proposal_id: int, 
                           min_datetime: datetime = datetime(2025, 2, 9, 0, 0, 0), 
                           max_datetime: datetime = datetime(2025, 2, 15, 23, 59, 59)) -> datetime:
@@ -193,11 +197,7 @@ class Timetable:
         for proposal in PROPOSALS:
             start_datetime = self.generate_datetime(proposal.id) if random.random > 0.75 else None
             self.schedules.append([proposal.id, start_datetime])  # Append as a list
-            
-
-    def all_constraints_met(self, proposal_id: int) -> bool:
-        # Placeholder for actual constraint checking logic
-        return True  # Replace with actual logic
+        
     
     def compute_score(self) -> float:
         global PROPOSALS
@@ -213,8 +213,9 @@ class Timetable:
                     if PROPOSAL != proposal and (PROPOSAL.start_datetime - proposal.start_datetime > max(PROPOSAL.simulated_duration, proposal.simulated_duration)):
                         clash_time = None # compute classhig time 
                         total_clash_time += clash_time
-
-        score = total_clash_time / total_time
+        total_num_proposals = len(self.schedules)
+        total_num_unscheduled_proposals = [start_datetime for _, start_datetime in self.schedules].count(None)
+        score = ((total_time - total_clash_time) * (total_num_proposals - total_num_unscheduled_proposals)) / (total_time * total_num_proposals)
         return score
             
     def crossover(self, schedules: list[list[int]]) -> list[list[int]]:
@@ -601,9 +602,9 @@ def main():
         if cumulative_week_duration >= total_week_duration * 2:
             break
         PROPOSALS.append(proposal)
-    TIMESLOTS = generate_timeslots(date.fromisoformat("2025-02-09"), date.fromisoformat("2025-02-15"))
+    TIMESLOTS = generate_timeslots(MIN_DATE, MAX_DATE)
 
-    """
+    
     print("Desplaying Randomly Generated Timetable...")
     timetable = Timetable()
     timetable.display()
@@ -630,6 +631,6 @@ def main():
     genetic_algorithm: GeneticAlgorithm = GeneticAlgorithm(20, 10000)
     best_timetable: Timetable = genetic_algorithm.get_best_fit_timetable()
     best_timetable.display()
-
+    """
 if __name__ == "__main__":
     main()
