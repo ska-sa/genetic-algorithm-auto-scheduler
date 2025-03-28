@@ -195,7 +195,7 @@ class Timetable:
         global PROPOSALS
         
         for proposal in PROPOSALS:
-            start_datetime = self.generate_datetime(proposal.id) if random.random > 0.75 else None
+            start_datetime = self.generate_datetime(proposal.id) if random.random() > 0.75 else None
             self.schedules.append([proposal.id, start_datetime])  # Append as a list
         
     
@@ -209,13 +209,31 @@ class Timetable:
             if start_datetime is not None:
                 proposal: Proposal = get_proposal_by_id(proposal_id=proposal_id)
                 total_time += proposal.simulated_duration
-                for PROPOSAL in PROPOSALS:
-                    if PROPOSAL != proposal and (PROPOSAL.start_datetime - proposal.start_datetime > max(PROPOSAL.simulated_duration, proposal.simulated_duration)):
-                        clash_time = None # compute classhig time 
+                for another_proposal_id, another_proposal_start_datetime in self.schedules:
+                    another_proposal: Proposal = get_proposal_by_id(another_proposal_id)
+                    
+                    if (
+                        proposal_id != another_proposal_id and
+                        start_datetime is not None and
+                        another_proposal_start_datetime is not None
+                    ):
+                        # Calculate end times for both proposals
+                        proposal_end_datetime = start_datetime + timedelta(seconds=proposal.simulated_duration)
+                        another_proposal_end_datetime = another_proposal_start_datetime + timedelta(seconds=another_proposal.simulated_duration)
+
+                        # Check for clash
+                        if (start_datetime < another_proposal_end_datetime) and (another_proposal_start_datetime < proposal_end_datetime):
+                            # Calculate clash time
+                            clash_time = max(0, 
+                                            (min(proposal_end_datetime, another_proposal_end_datetime) - 
+                                            max(start_datetime, another_proposal_start_datetime)).total_seconds())
+                        else:
+                            clash_time = 0  # No clash
+
                         total_clash_time += clash_time
         total_num_proposals = len(self.schedules)
         total_num_unscheduled_proposals = [start_datetime for _, start_datetime in self.schedules].count(None)
-        score = ((total_time - total_clash_time) * (total_num_proposals - total_num_unscheduled_proposals)) / (total_time * total_num_proposals)
+        score = ((total_time - total_clash_time) * (total_num_proposals - total_num_unscheduled_proposals)) / (total_time * total_num_proposals + 1e-6)
         return score
             
     def crossover(self, schedules: list[list[int]]) -> list[list[int]]:
@@ -228,11 +246,11 @@ class Timetable:
         global PROPOSALS
         num_of_mutable_schedules: int = int(len(self.schedules) * mutation_rate)
         mutation_indexes: list[int] = list()
-        while len(mutation_index) < num_of_mutable_schedules:
+        while len(mutation_indexes) < num_of_mutable_schedules:
             mutation_index = random.randint(0, len(self.schedules) -1)
             if mutation_index not in mutation_indexes:
                 proposal_id = self.schedules[mutation_index][0] # Get proposal_id
-                start_datetime = self.generate_datetime(proposal_id) if random.random > 0.75 else None # Compute new start_datetinme
+                start_datetime = self.generate_datetime(proposal_id) if random.random() > 0.75 else None # Compute new start_datetinme
                 self.schedules[mutation_index][1] = start_datetime # Mutate the start_datettime at this mutation index
                 mutation_indexes.append(mutation_index)
 
@@ -422,7 +440,7 @@ class Timetable:
           
     def remove_partialy_allocated_proposals(self) -> None:
         return
-    """
+    
     def display(self) -> None:
         # Create a figure and axis
         fig, ax = plt.subplots(figsize=(24, 12))
@@ -493,7 +511,80 @@ class Timetable:
                 print("")
 
         print(f"Fitness: {self.score():.2f}\n")
+    """
 
+    def display(self) -> None:
+        # Create a figure and axis
+        fig, ax = plt.subplots(figsize=(24, 12))
+
+        # Set the x-axis ticks to weekdays
+        weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+        ax.set_xticks(np.arange(len(weekdays)) + 0.5)
+        ax.set_xticklabels(weekdays, ha='center')
+        ax.set_xlim(-0.5, len(weekdays) + 0.5)  # Ensure the last block is aligned
+
+        # Determine the time range for the y-axis
+        start_time = min(schedule[1] for schedule in self.schedules if schedule[1] is not None).replace(hour=0, minute=0)
+        end_time = max(schedule[1] + timedelta(seconds=get_proposal_by_id(schedule[0]).simulated_duration) 
+                    for schedule in self.schedules if schedule[1] is not None)
+        time_range = [start_time + timedelta(hours=h) for h in range(24)]
+        ax.set_yticks(np.arange(len(time_range)))
+        ax.set_yticklabels([t.strftime('%H:%M') for t in time_range])
+        ax.set_ylim(0, 23 + 1)
+
+        # Plot the scheduled proposals
+        unique_proposals = {}
+        for i, (proposal_id, start_datetime) in enumerate(self.schedules):
+            if start_datetime is not None:
+                proposal = get_proposal_by_id(proposal_id)
+                if proposal:
+                    # Calculate the position of the proposal on the grid
+                    weekday = start_datetime.weekday()
+                    time_index = start_datetime.hour
+
+                    # Determine the color based on the proposal ID
+                    color = f'C{proposal_id % 10}'  # Use modulo to cycle through colors
+
+                    # Add a rectangle for the proposal
+                    rect = matplotlib.patches.Rectangle((weekday + 1, time_index), 1, 1, facecolor=color, alpha=0.5, edgecolor='black', linewidth=1)
+                    ax.add_patch(rect)
+
+                    # Add text for the proposal
+                    ax.text(weekday + 1 + 0.5, time_index + 0.5, proposal.owner_email, ha='center', va='center', color='white')
+
+                    # Store unique proposals for legend
+                    unique_proposals[proposal_id] = proposal.owner_email
+
+        # Add a legend
+        legend_patches = [plt.Rectangle((0, 0), 1, 1, facecolor=f'C{i % 10}', alpha=0.5, edgecolor='black', linewidth=2) for i in unique_proposals.keys()]
+        legend_labels = [f'Proposal {pid}' for pid in unique_proposals.keys()]
+        ax.legend(legend_patches, legend_labels, loc='upper left', bbox_to_anchor=(1.05, 1))
+
+        # Set the title and axis labels
+        ax.set_title('Timetable')
+        ax.set_xlabel('Weekday')
+        ax.set_ylabel('Time')
+
+        # Display the plot
+        plt.savefig(f"outputs/timetable_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png")
+
+        # Print the textual output
+        for proposal_id, start_datetime in self.schedules:
+            if start_datetime is not None:
+                proposal = get_proposal_by_id(proposal_id)
+                end_time = start_datetime + timedelta(seconds=proposal.simulated_duration)
+                if start_datetime.hour == 0:
+                    print("--------------------------------")
+                    print(f"{start_datetime.strftime('%d %B %Y')}")
+                print(f"\t{start_datetime.strftime('%H:%M')} - {end_time.strftime('%H:%M')}\t", end="")
+                if proposal:
+                    print(proposal.owner_email, proposal.simulated_duration // (60 * 60))
+                else:
+                    print("")
+            else:
+                print(f"Proposal ID {proposal_id} is not scheduled.")
+
+        print(f"Fitness: {self.compute_score():.2f}\n")
 
 class GeneticAlgorithm():
     def __init__(self, num_of_timetables: int = 5 * 10, num_of_generations: int = 15 * 1000) -> None:
@@ -612,17 +703,17 @@ def main():
     print("Crossover...")
     parent_timetable_1: Timetable = Timetable()
     parent_timetable_2: Timetable = Timetable()
-    print(f"parent_timetable_1 fitnest {parent_timetable_1.score()}\tparent_timetable_2 fitnest {parent_timetable_2.score()}")
+    print(f"parent_timetable_1 fitnest {parent_timetable_1.compute_score()}\tparent_timetable_2 fitnest {parent_timetable_2.compute_score()}")
     offspring_timetable: Timetable = Timetable(parent_timetable_1.crossover(parent_timetable_2.schedules))
-    print(f"offspring_timetable fitness {offspring_timetable.score()}")
+    print(f"offspring_timetable fitness {offspring_timetable.compute_score()}")
 
     print("Mutation...")
     offspring_timetable.mutation()
-    print(f"offspring_timetable fitness after mutation {offspring_timetable.score()}")
+    print(f"offspring_timetable fitness after mutation {offspring_timetable.compute_score()}")
 
-    print(f"offspring_timetable fitnest {offspring_timetable.score()}\tparent_timetable_2 fitnest {parent_timetable_2.score()}")
+    print(f"offspring_timetable fitnest {offspring_timetable.compute_score()}\tparent_timetable_2 fitnest {parent_timetable_2.compute_score()}")
     offspring_timetable_1: Timetable = Timetable(offspring_timetable.crossover(parent_timetable_2.schedules))
-    print(f"offspring_timetable_1 fitness {offspring_timetable_1.score()}")
+    print(f"offspring_timetable_1 fitness {offspring_timetable_1.compute_score()}")
     
     exit()
     """
