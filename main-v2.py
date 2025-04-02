@@ -46,7 +46,7 @@ def read_proposals_from_csv(file_path: str) -> list[Proposal]:
             if row['minimum_antennas'] == '':
                 continue # invalid data with missing key 'minimum_antennas'
 
-            if int(row['simulated_duration']) == 0:
+            if int(row['simulated_duration']) < 60 * 30:
                 continue
             proposals.append(Proposal(
                 int(row['id']),
@@ -224,12 +224,13 @@ class Timetable:
                         another_proposal_end_datetime = another_proposal_start_datetime + timedelta(seconds=another_proposal.simulated_duration)
 
                         # Check for clash
-                        if (start_datetime < another_proposal_end_datetime) and (another_proposal_start_datetime < proposal_end_datetime):
-                            # Calculate clash time
-                            clash_time = max(0, 
-                                            (min(proposal_end_datetime, another_proposal_end_datetime) - 
-                                            max(start_datetime, another_proposal_start_datetime)).total_seconds())
-                            total_clash_time += clash_time
+                        # Calculate clash time
+                        max_start = max(start_datetime, another_proposal_start_datetime)
+                        min_end = min(proposal_end_datetime, another_proposal_end_datetime)
+                        
+                        # Calculate clash time in seconds
+                        clash_time = max(0, (min_end - max_start).total_seconds())
+                        total_clash_time += clash_time
 
         total_num_proposals = len(self.schedules)
         total_num_unscheduled_proposals = [start_datetime for _, start_datetime in self.schedules].count(None)
@@ -239,7 +240,7 @@ class Timetable:
             return 0.0
 
         # Calculate score
-        score = ((total_time - total_clash_time) * (total_num_proposals - total_num_unscheduled_proposals)) / (total_time * total_num_proposals)
+        score = ((total_time - total_clash_time) * (total_num_proposals - total_num_unscheduled_proposals) * 1.0) / (total_time * total_num_proposals * 1.0)
         
         # Ensure score is non-negative
         return max(0.0, score)
@@ -606,6 +607,75 @@ class Timetable:
 
         print(f"Fitness: {self.compute_score():.2f}\n")
 
+    def plot(self, filename='weekly_timetable.png'):
+        # Define days of the week and colors
+        days_of_week = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+        colors = ['gray', 'yellow', 'blue', 'green', 'brown', 'pink', 
+                  'lightgreen', 'lightblue', 'wheat', 'salmon', 'lightcoral', 'lightyellow']
+
+        # Create a figure for plotting
+        fig, ax = plt.subplots(figsize=(12, 8))
+
+        # Dictionary to hold color legend
+        legend_dict = {}
+
+        # Total number of proposals
+        total_proposals = len(self.schedules)
+        scheduled_proposals = 0
+
+        # Iterate through schedules to plot each proposal
+        for idx, (proposal_id, start_datetime) in enumerate(self.schedules):
+            if start_datetime is not None:
+                scheduled_proposals += 1  # Count scheduled proposals
+                proposal = get_proposal_by_id(proposal_id)
+                end_datetime = start_datetime + timedelta(minutes=proposal.simulated_duration)
+
+                # Calculate the day of the week and time for plotting
+                day_index = start_datetime.weekday()  # Monday is 0 and Sunday is 6
+                start_time = start_datetime.hour + start_datetime.minute / 60.0 + start_datetime.second / (60.0 * 60.0)
+                end_time = end_datetime.hour + end_datetime.minute / 60.0 + end_datetime.second / (60.0 * 60.0)
+
+                # Randomly select a color for the block
+                color = random.choice(colors)
+
+                # Plot the block for the proposal with a black border and 25% opacity
+                ax.fill_between([day_index - 0.1, day_index + 0.7], [start_time, start_time], [end_time, end_time],
+                                color=color, edgecolor='black', linewidth=1, alpha=0.25)
+
+                # Add the index at the top and the owner email text below it
+                ax.text(day_index - 0.05, end_time + 0.0, str(idx), 
+                        ha='left', va='bottom', fontsize=10, color='black')
+                #ax.text(day_index - 0.05, (start_time + end_time) / 2, proposal.owner_email, 
+                #        ha='left', va='center', fontsize=10, color='black')
+
+                # Add to legend with index and email
+                legend_key = f"{idx}: {proposal.owner_email}"
+                if legend_key not in legend_dict:
+                    legend_dict[legend_key] = color
+
+        # Set the x-axis and y-axis limits and labels
+        ax.set_xticks(range(len(days_of_week)))
+        ax.set_xticklabels(days_of_week)
+        ax.set_xlabel('Days of the Week')
+        ax.set_ylabel('Time (hours)')
+        ax.set_ylim(0, 24)
+        
+        # Update the title to include scheduled proposals count
+        ax.set_title(f'Weekly Timetable: {scheduled_proposals}/{total_proposals} Proposals', fontsize=16)
+
+        # Add gridlines for better readability
+        ax.yaxis.grid(True)
+
+        # Create a legend outside the plot
+        handles = [plt.Rectangle((0, 0), 1, 1, color=color) for color in legend_dict.values()]
+        ax.legend(handles, legend_dict.keys(), title="Proposals", loc='upper left', bbox_to_anchor=(1, 1))
+
+        # Save the plot to a file
+        plt.tight_layout()
+        plt.savefig(filename, dpi=200)  # Save the figure as a PNG file
+        plt.close(fig)  # Close the figure to free up memory
+
+
 class GeneticAlgorithm():
     def __init__(self, num_of_timetables: int = 5 * 10, num_of_generations: int = 15 * 1000) -> None:
         self.num_of_timetables: int = num_of_timetables
@@ -706,12 +776,12 @@ class GeneticAlgorithm():
 def main():
     global TIMESLOTS, PROPOSALS
     proposals: list[Proposal] = read_proposals_from_csv('./proposals/csv/ObsList1737538994939.csv')
-    total_week_duration: int = 60 * 60 * 24
+    total_week_duration: int = 60 * 60 * 24 * 7
     cumulative_week_duration: int = 0
     for proposal in proposals:
         cumulative_week_duration += proposal.simulated_duration
-        #if cumulative_week_duration >= total_week_duration * 2:
-        #    break
+        if cumulative_week_duration >= total_week_duration * 0.5:
+            break
         PROPOSALS.append(proposal)
     TIMESLOTS = generate_timeslots(MIN_DATE, MAX_DATE)
 
@@ -739,9 +809,10 @@ def main():
     """
 
     print("Generating Timetable using Genetic Algorithim")
-    genetic_algorithm: GeneticAlgorithm = GeneticAlgorithm(10, 10000)
+    genetic_algorithm: GeneticAlgorithm = GeneticAlgorithm(10, 2500)
     best_timetable: Timetable = genetic_algorithm.get_best_fit_timetable()
     best_timetable.display()
+    best_timetable.plot()
     
 if __name__ == "__main__":
     main()
