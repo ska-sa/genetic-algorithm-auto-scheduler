@@ -168,7 +168,7 @@ def get_sunrise_sunset(date: date) -> tuple[datetime, datetime]:
     sunset_datetime = datetime(date.year, date.month, date.day, 18, 0, 0)  # 6:00 PM
     return sunrise_datetime, sunset_datetime
 
-
+# Checkout astropy to check lst start window, night window, and sunrise and sunset
 class Timetable:
     def __init__(self, schedules: list[list[int]] = None):
         if schedules is None:
@@ -177,21 +177,49 @@ class Timetable:
         else:
             self.schedules = schedules
 
-    def all_constraints_met(self, proposal_id: int) -> bool:
-        # Placeholder for actual constraint checking logic
-        return True  # Replace with actual logic
+    def all_constraints_met(self, proposal: Proposal, start_datetime: datetime) -> bool:
+        return self.night_obs_contraint_met(proposal, start_datetime) #and self.avoid_sunrise_sunset_contraint_met(proposal, start_datetime)
+    
+    def night_obs_contraint_met(self, proposal: Proposal, start_datetime: datetime) -> bool:
+        if proposal.night_obs:
+            # Compute end datetime based on simulated duration
+            end_datetime = start_datetime + timedelta(minutes=proposal.simulated_duration)
+            night_start_datetime, night_end_datetime = get_night_window(start_datetime.date())
+
+            # Check if both start and end datetimes are outside the night window
+            if (start_datetime < night_start_datetime and end_datetime < night_start_datetime) or \
+               (start_datetime > night_end_datetime and end_datetime > night_end_datetime):
+                return True  # Constraint met
+            return False  # Constraint not met
+        return True  # If night observations are not required, constraint is met
+    
+    def avoid_sunrise_sunset_contraint_met(self, proposal: Proposal, start_datetime: datetime) -> bool:
+        if proposal.avoid_sunrise_sunset:
+            # Get sunrise and sunset datetimes
+            sunrise_datetime, sunset_datetime = get_sunrise_sunset(date=start_datetime.date())
+
+            # Compute end datetime based on the proposal's duration
+            end_datetime = start_datetime + timedelta(minutes=proposal.simulated_duration)
+
+            # Check if sunrise or sunset occurs within the proposal's duration
+            if (sunrise_datetime >= end_datetime) or (sunset_datetime <= start_datetime):
+                return True  # Constraint met (neither occurs during the proposal)
+            return False  # Constraint not met (one of them occurs during the proposal)
+        return True  # If avoiding sunrise/sunset is not required, constraint is met
 
     def generate_datetime(self, proposal_id: int, 
                           min_datetime: datetime = datetime(2025, 2, 9, 0, 0, 0), 
                           max_datetime: datetime = datetime(2025, 2, 15, 23, 59, 59)) -> datetime:
-        while True:
+        proposal: Proposal = get_proposal_by_id(proposal_id)
+        for _ in range(100):
             # Generate a random date between min_datetime and max_datetime
             random_timestamp = random.randint(int(min_datetime.timestamp()), int(max_datetime.timestamp()))
             start_datetime = datetime.fromtimestamp(random_timestamp)
 
             # Check if all constraints are met
-            if self.all_constraints_met(proposal_id):
+            if self.all_constraints_met(proposal, start_datetime):
                 return start_datetime 
+        return None
 
     def generate(self) -> None:
         global PROPOSALS
@@ -564,10 +592,10 @@ class Timetable:
                     time_index = start_datetime.hour
 
                     # Determine the color based on the proposal ID
-                    color = f'C{proposal_id % 10}'  # Use modulo to cycle through colors
+                    color = f'C{random.randint(0, 10)}' 
 
                     # Add a rectangle for the proposal
-                    rect = matplotlib.patches.Rectangle((weekday + 1, time_index), 1, 1, facecolor=color, alpha=0.5, edgecolor='black', linewidth=1)
+                    rect = matplotlib.patches.Rectangle((weekday + 1, time_index), 1, 1, facecolor=color, alpha=0.75, edgecolor='black', linewidth=2)
                     ax.add_patch(rect)
 
                     # Add text for the proposal
@@ -632,26 +660,50 @@ class Timetable:
 
                 # Calculate the day of the week and time for plotting
                 day_index = start_datetime.weekday()  # Monday is 0 and Sunday is 6
-                start_time = start_datetime.hour + start_datetime.minute / 60.0 + start_datetime.second / (60.0 * 60.0)
-                end_time = end_datetime.hour + end_datetime.minute / 60.0 + end_datetime.second / (60.0 * 60.0)
+                start_time = start_datetime.hour + start_datetime.minute / 60.0
+                end_time = end_datetime.hour + end_datetime.minute / 60.0 
 
                 # Randomly select a color for the block
-                color = random.choice(colors)
+                color = colors[idx % len(colors)]
 
-                # Plot the block for the proposal with a black border and 25% opacity
-                ax.fill_between([day_index - 0.1, day_index + 0.7], [start_time, start_time], [end_time, end_time],
-                                color=color, edgecolor='black', linewidth=1, alpha=0.25)
+                # Handle overnight events
+                if (end_time - start_time) < 0:
+                    # Draw the first rectangle for the current day
+                    ax.fill_between([day_index - 0.5, day_index + 0.5], [start_time, start_time], [24, 24],
+                                    color=color, edgecolor='black', linewidth=0.5, alpha=0.25)
+                    # Draw the second rectangle for the next day
+                    next_day_index = (day_index + 1)  # Wrap around to the start of the week
+                    next_start_time = 0  # Start at the bottom of the next day
+                    if next_day_index < 7:
+                        ax.fill_between([next_day_index - 0.5, next_day_index + 0.5], [next_start_time, next_start_time], [end_time, end_time],
+                                        color=color, edgecolor='black', linewidth=0.5, alpha=0.25)
 
-                # Add the index at the top and the owner email text below it
-                ax.text(day_index - 0.05, end_time + 0.0, str(idx), 
-                        ha='left', va='bottom', fontsize=10, color='black')
-                #ax.text(day_index - 0.05, (start_time + end_time) / 2, proposal.owner_email, 
-                #        ha='left', va='center', fontsize=10, color='black')
+                    # Place index text in the first rectangle
+                    ax.text(day_index, (start_time + 24) / 2, str(idx), 
+                            ha='center', va='center', fontsize=10, color='black')
+                    if next_day_index < 7:
+                        # Place index text in the second rectangle
+                        ax.text(next_day_index, (next_start_time + end_time) / 2, str(idx), 
+                                ha='center', va='center', fontsize=10, color='black')
+
+                else:
+                    # Plot the block for the proposal with a black border and 25% opacity
+                    ax.fill_between([day_index - 0.5, day_index + 0.5], [start_time, start_time], [end_time, end_time],
+                                    color=color, edgecolor='black', linewidth=0.5, alpha=0.25)
+
+                    # Place index text inside the rectangle
+                    ax.text(day_index, (start_time + end_time) / 2, str(idx), 
+                            ha='center', va='center', fontsize=10, color='black')
 
                 # Add to legend with index and email
-                legend_key = f"{idx}: {proposal.owner_email}"
+                legend_key = f"{idx}: {proposal.owner_email} {(proposal.simulated_duration / (60.0 * 60.0)):0.2f}"
                 if legend_key not in legend_dict:
                     legend_dict[legend_key] = color
+
+                print(f"{idx}\t{day_index}\t{start_time:0.2f}\t{end_time:0.2f}\t\t{(end_time - start_time):0.2f}")
+
+                if idx >= 10:
+                    break
 
         # Set the x-axis and y-axis limits and labels
         ax.set_xticks(range(len(days_of_week)))
@@ -674,6 +726,7 @@ class Timetable:
         plt.tight_layout()
         plt.savefig(filename, dpi=200)  # Save the figure as a PNG file
         plt.close(fig)  # Close the figure to free up memory
+
 
 
 class GeneticAlgorithm():
@@ -780,7 +833,7 @@ def main():
     cumulative_week_duration: int = 0
     for proposal in proposals:
         cumulative_week_duration += proposal.simulated_duration
-        if cumulative_week_duration >= total_week_duration * 0.5:
+        if cumulative_week_duration > total_week_duration * 0.5:
             break
         PROPOSALS.append(proposal)
     TIMESLOTS = generate_timeslots(MIN_DATE, MAX_DATE)
@@ -809,7 +862,7 @@ def main():
     """
 
     print("Generating Timetable using Genetic Algorithim")
-    genetic_algorithm: GeneticAlgorithm = GeneticAlgorithm(10, 2500)
+    genetic_algorithm: GeneticAlgorithm = GeneticAlgorithm(10, 1000)
     best_timetable: Timetable = genetic_algorithm.get_best_fit_timetable()
     best_timetable.display()
     best_timetable.plot()
