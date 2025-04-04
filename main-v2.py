@@ -178,7 +178,7 @@ class Timetable:
             self.schedules = schedules
 
     def all_constraints_met(self, proposal: Proposal, start_datetime: datetime) -> bool:
-        return self.night_obs_contraint_met(proposal, start_datetime) #and self.avoid_sunrise_sunset_contraint_met(proposal, start_datetime)
+        return self.night_obs_contraint_met(proposal, start_datetime) and self.avoid_sunrise_sunset_contraint_met(proposal, start_datetime)
     
     def night_obs_contraint_met(self, proposal: Proposal, start_datetime: datetime) -> bool:
         if proposal.night_obs:
@@ -238,7 +238,7 @@ class Timetable:
             proposal_id, start_datetime = schedule
             if start_datetime is not None:
                 proposal: Proposal = get_proposal_by_id(proposal_id)
-                total_time += proposal.simulated_duration
+                
                 
                 for another_proposal_id, another_proposal_start_datetime in self.schedules:
                     another_proposal: Proposal = get_proposal_by_id(another_proposal_id)
@@ -259,6 +259,8 @@ class Timetable:
                         # Calculate clash time in seconds
                         clash_time = max(0, (min_end - max_start).total_seconds())
                         total_clash_time += clash_time
+
+                        total_time += proposal.simulated_duration
 
         total_num_proposals = len(self.schedules)
         total_num_unscheduled_proposals = [start_datetime for _, start_datetime in self.schedules].count(None)
@@ -656,7 +658,7 @@ class Timetable:
             if start_datetime is not None:
                 scheduled_proposals += 1  # Count scheduled proposals
                 proposal = get_proposal_by_id(proposal_id)
-                end_datetime = start_datetime + timedelta(minutes=proposal.simulated_duration)
+                end_datetime = start_datetime + timedelta(seconds=proposal.simulated_duration)
 
                 # Calculate the day of the week and time for plotting
                 day_index = start_datetime.weekday()  # Monday is 0 and Sunday is 6
@@ -701,9 +703,7 @@ class Timetable:
                     legend_dict[legend_key] = color
 
                 print(f"{idx}\t{day_index}\t{start_time:0.2f}\t{end_time:0.2f}\t\t{(end_time - start_time):0.2f}")
-
-                if idx >= 10:
-                    break
+     
 
         # Set the x-axis and y-axis limits and labels
         ax.set_xticks(range(len(days_of_week)))
@@ -827,13 +827,13 @@ class GeneticAlgorithm():
 
 
 def main():
-    global TIMESLOTS, PROPOSALS
+    global TIMESLOTS, PROPOSALS, MIN_DATE, MAX_DATE
     proposals: list[Proposal] = read_proposals_from_csv('./proposals/csv/ObsList1737538994939.csv')
     total_week_duration: int = 60 * 60 * 24 * 7
     cumulative_week_duration: int = 0
     for proposal in proposals:
         cumulative_week_duration += proposal.simulated_duration
-        if cumulative_week_duration > total_week_duration * 0.5:
+        if cumulative_week_duration > total_week_duration * 0.9:
             break
         PROPOSALS.append(proposal)
     TIMESLOTS = generate_timeslots(MIN_DATE, MAX_DATE)
@@ -862,10 +862,10 @@ def main():
     """
 
     print("Generating Timetable using Genetic Algorithim")
-    genetic_algorithm: GeneticAlgorithm = GeneticAlgorithm(10, 1000)
+    genetic_algorithm: GeneticAlgorithm = GeneticAlgorithm(10, 2500)
     best_timetable: Timetable = genetic_algorithm.get_best_fit_timetable()
     best_timetable.display()
-    best_timetable.plot()
+    best_timetable.plot(filename=f'outputs/{MIN_DATE.strftime("%m-%d-%Y")} to {MAX_DATE.strftime("%m-%d-%Y")}.png')
     
 if __name__ == "__main__":
     main()
