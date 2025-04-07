@@ -828,6 +828,8 @@ class GeneticAlgorithm():
 
 def main():
     global TIMESLOTS, PROPOSALS, MIN_DATE, MAX_DATE
+    MIN_DATE = date(2025, 2, 9)
+    MAX_DATE = date(2025, 2, 15)
     proposals: list[Proposal] = read_proposals_from_csv('./proposals/csv/ObsList1737538994939.csv')
     total_week_duration: int = 60 * 60 * 24 * 7
     cumulative_week_duration: int = 0
