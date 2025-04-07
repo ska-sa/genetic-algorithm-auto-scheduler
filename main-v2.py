@@ -207,19 +207,53 @@ class Timetable:
             return False  # Constraint not met (one of them occurs during the proposal)
         return True  # If avoiding sunrise/sunset is not required, constraint is met
 
-    def generate_datetime(self, proposal_id: int, 
-                          min_datetime: datetime = datetime(2025, 2, 9, 0, 0, 0), 
-                          max_datetime: datetime = datetime(2025, 2, 15, 23, 59, 59)) -> datetime:
+    def generate_datetime(self, proposal_id: int) -> datetime:
         proposal: Proposal = get_proposal_by_id(proposal_id)
-        for _ in range(100):
-            # Generate a random date between min_datetime and max_datetime
-            random_timestamp = random.randint(int(min_datetime.timestamp()), int(max_datetime.timestamp()))
-            start_datetime = datetime.fromtimestamp(random_timestamp)
+        
+        for _ in range(10):  # Retry up to 10 times
+            # Randomly generate a date between MIN_DATE and MAX_DATE
+            randomly_generated_date = self.random_date(MIN_DATE, MAX_DATE)
+            
+            # Skip if the date exceeds MAX_DATE
+            if randomly_generated_date > MAX_DATE:
+                continue
+
+            # Randomly generate a time between lst_start_time and lst_end_time
+            randomly_generated_time = self.random_time(proposal.lst_start_time, proposal.lst_start_end_time)
+
+            # Combine date and time to get the start datetime
+            start_datetime = datetime.combine(randomly_generated_date, randomly_generated_time)
+            end_datetime = start_datetime + timedelta(seconds=proposal.simulated_duration)
+            if start_datetime.weekday() == 3 or end_datetime.weekday() == 3: # Skip Wednsday
+                continue
 
             # Check if all constraints are met
             if self.all_constraints_met(proposal, start_datetime):
-                return start_datetime 
-        return None
+                return start_datetime
+        
+        return None  # Return None if no valid datetime is found after retries
+
+    def random_date(self, min_date: date, max_date: date) -> date:
+        delta = max_date - min_date
+        random_days = random.randint(0, delta.days)
+        return min_date + timedelta(days=random_days)
+
+    def random_time(self, start_time: time, end_time: time) -> time:
+        # Convert start and end time to total seconds
+        start_seconds = start_time.hour * 3600 + start_time.minute * 60 + start_time.second
+        end_seconds = end_time.hour * 3600 + end_time.minute * 60 + end_time.second
+
+        # If the end time is less than the start time, it means it wraps to the next day
+        if end_seconds < start_seconds:
+            end_seconds += 24 * 3600  # Add 24 hours in seconds to end_time
+
+        # Generate a random time in seconds between start and end
+        random_seconds = random.randint(start_seconds, end_seconds)
+
+        # Convert back to hours, minutes, seconds
+        hours, remainder = divmod(random_seconds, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        return time(hour=hours % 24, minute=minutes, second=seconds)  # Ensure hours are within 24
 
     def generate(self) -> None:
         global PROPOSALS
@@ -831,11 +865,13 @@ def main():
     MIN_DATE = date(2025, 2, 9)
     MAX_DATE = date(2025, 2, 15)
     proposals: list[Proposal] = read_proposals_from_csv('./proposals/csv/ObsList1737538994939.csv')
-    total_week_duration: int = 60 * 60 * 24 * 7
+    random.shuffle(proposals) # Shaffle the proposals
+
+    total_week_duration: int = (MAX_DATE - MIN_DATE - timedelta(days=1)).total_seconds()
     cumulative_week_duration: int = 0
     for proposal in proposals:
         cumulative_week_duration += proposal.simulated_duration
-        if cumulative_week_duration > total_week_duration * 0.9:
+        if cumulative_week_duration > total_week_duration * 0.75:
             break
         PROPOSALS.append(proposal)
     TIMESLOTS = generate_timeslots(MIN_DATE, MAX_DATE)
@@ -864,10 +900,10 @@ def main():
     """
 
     print("Generating Timetable using Genetic Algorithim")
-    genetic_algorithm: GeneticAlgorithm = GeneticAlgorithm(10, 2500)
+    genetic_algorithm: GeneticAlgorithm = GeneticAlgorithm(10, 500)
     best_timetable: Timetable = genetic_algorithm.get_best_fit_timetable()
     best_timetable.display()
-    best_timetable.plot(filename=f'outputs/{MIN_DATE.strftime("%m-%d-%Y")} to {MAX_DATE.strftime("%m-%d-%Y")}.png')
+    best_timetable.plot(filename=f'outputs/week {MIN_DATE.strftime("%m-%d-%Y")} to {MAX_DATE.strftime("%m-%d-%Y")} timetable.png')
     
 if __name__ == "__main__":
     main()
