@@ -305,7 +305,8 @@ class Timetable:
 
         # Calculate score
         score = ((total_time - total_clash_time) * (total_num_proposals - total_num_unscheduled_proposals) * 1.0) / (total_time * total_num_proposals * 1.0)
-        
+        #score = ((total_time - total_clash_time) / (total_time))  * (0.9) ** (1 - (total_num_proposals - total_num_unscheduled_proposals) / (total_num_proposals))
+
         # Ensure score is non-negative
         return max(0.0, score)
 
@@ -871,7 +872,7 @@ def main():
     cumulative_week_duration: int = 0
     for proposal in proposals:
         cumulative_week_duration += proposal.simulated_duration
-        if cumulative_week_duration > total_week_duration * 0.75:
+        if cumulative_week_duration > total_week_duration * 0.9:
             break
         PROPOSALS.append(proposal)
     TIMESLOTS = generate_timeslots(MIN_DATE, MAX_DATE)
