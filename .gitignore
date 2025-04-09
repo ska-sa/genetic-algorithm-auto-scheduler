@@ -1,8 +1,9 @@
-venv/
+*venv/
 
-classes/__pycache__
-tests/__pycache__
+*__pycache__/
 
 proposals/
 
-outputs/timetable_*.png
+outputs/timetable*
+
+outputs/*2025.png
