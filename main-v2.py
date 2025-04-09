@@ -16,7 +16,7 @@ def read_proposals_from_csv(file_path: str) -> list[Proposal]:
     proposals = []
     with open(file_path, 'r') as file:
         reader = csv.DictReader(file)
-        for row in reader:
+        for id, row in enumerate(reader):
             prefered_dates_start = []
             prefered_dates_end = []
             avoid_dates_start = []
@@ -56,15 +56,18 @@ def read_proposals_from_csv(file_path: str) -> list[Proposal]:
                 prefered_dates_end,
                 avoid_dates_start,
                 avoid_dates_end,
-                True if str(row['night_obs']).capitalize() == "Yes" else False,
-                True if str(row['avoid_sunrise_sunset']).capitalize == "Yes" else False,
+                True if str(row['night_obs']).lower() == "yes" else False,
+                True if str(row['avoid_sunrise_sunset']).lower == "yes" else False,
                 int(row['minimum_antennas']),
                 Proposal.parse_time(row['lst_start']),
                 Proposal.parse_time(row['lst_start_end']),
                 int(row['simulated_duration']),
                 get_score(str(row['proposal_id']))
             ))
-
+            if str(row['night_obs']).lower() == "yes":
+                print(id)
+                
+    
     return proposals
 
 def get_score(proposal_id: str):
@@ -134,6 +137,8 @@ def utc_to_lst(utc_datetime: datetime) -> datetime:
 
     return lst_datetime
 
+def lst_to_utc(date: date, lst_time: time) -> datetime:
+    return datetime.combine(date, lst_time)
 
 def get_night_window(date: date) -> tuple[datetime, datetime]:
     """
@@ -224,8 +229,8 @@ class Timetable:
             # Combine date and time to get the start datetime
             start_datetime = datetime.combine(randomly_generated_date, randomly_generated_time)
             end_datetime = start_datetime + timedelta(seconds=proposal.simulated_duration)
-            if start_datetime.weekday() == 3 or end_datetime.weekday() == 3: # Skip Wednsday
-                continue
+            #if start_datetime.weekday() == 3 or end_datetime.weekday() == 3: # Skip Wednsday
+            #    continue
 
             # Check if all constraints are met
             if self.all_constraints_met(proposal, start_datetime):
@@ -303,10 +308,25 @@ class Timetable:
         if total_time == 0 or total_num_proposals == 0:
             return 0.0
 
-        # Calculate score
-        score = ((total_time - total_clash_time) * (total_num_proposals - total_num_unscheduled_proposals) * 1.0) / (total_time * total_num_proposals * 1.0)
-        #score = ((total_time - total_clash_time) / (total_time))  * (0.9) ** (1 - (total_num_proposals - total_num_unscheduled_proposals) / (total_num_proposals))
+        numerator = 0
+        denominator = 1
 
+        total_non_clash_time = total_time - total_clash_time
+        total_num_scheduled_proposals = total_num_proposals - total_num_unscheduled_proposals
+        if total_time > total_num_proposals:
+            scaler = total_time / total_num_proposals
+            numerator = total_non_clash_time * 0.9 + scaler * total_num_scheduled_proposals * 0.1
+            denominator = total_time * 0.9 + scaler * total_num_proposals * 0.1
+        else:
+            scaler = total_num_proposals / total_time
+            numerator = scaler * total_non_clash_time * 0.9 + total_num_scheduled_proposals * 0.1
+            denominator = scaler * total_time * 0.9 + total_num_proposals * 0.1
+
+        score = numerator / denominator
+        # Calculate score
+        #score = ((total_time - total_clash_time) * (total_num_proposals - total_num_unscheduled_proposals) * 1.0) / (total_time * total_num_proposals * 1.0)
+        #score = ((total_time - total_clash_time) / (total_time))  * (0.9) ** ((total_num_proposals) / (total_num_proposals - total_num_unscheduled_proposals))
+        
         # Ensure score is non-negative
         return max(0.0, score)
 
@@ -317,7 +337,7 @@ class Timetable:
             offspring_schedules.append(schedule_1 if random.random() > 0.5 else schedule_2)
         return offspring_schedules
     
-    def mutation(self, mutation_rate=0.2) -> None:
+    def mutation(self, mutation_rate=0.3) -> None:
         global PROPOSALS
         num_of_mutable_schedules: int = int(len(self.schedules) * mutation_rate)
         mutation_indexes: set[int] = set()  # Use a set for unique mutation indexes
@@ -340,264 +360,9 @@ class Timetable:
         self.schedules = original_schedules
 
     
-    def remove_partialy_allocated_proposals(self) -> None:
-        return
-    """
-    def all_hard_contraints_met(self, timeslot: Timeslot, proposal: Proposal):
-        return self.is_avoid_sunrise_sunset_cosnstraint_met(timeslot, proposal) and self.is_night_obs_contraint_met(timeslot, proposal) and self.is_lst_start_start_end_contraint_met(timeslot, proposal) and self.is_over_schedule_contraint_met(timeslot, proposal)
-
-    def is_avoid_sunrise_sunset_cosnstraint_met(self, timeslot: Timeslot, proposal: Proposal):
-        if proposal.avoid_sunrise_sunset:
-            sunrise_datetime, sunset_datetime = get_sunrise_sunset(timeslot.start_time.date())
-            
-            # Create a list of sunrise and sunset datetimes
-            sun_events = [sunrise_datetime, sunset_datetime]
-
-            # Check if timeslot overlaps with any sun event
-            for event_datetime in sun_events:
-                if timeslot.start_time <= event_datetime <= timeslot.end_time:
-                    return False
-        return True
-    
-    def is_lst_start_start_end_contraint_met(self, timeslot: Timeslot, proposal: Proposal):
-        if len(self.schedules) == len(TIMESLOTS):
-            start_time: datetime = utc_to_lst(datetime.combine(timeslot.start_time.date(), proposal.lst_start_time))
-            start_end_time: datetime = utc_to_lst(datetime.combine(timeslot.start_time.date(), proposal.lst_start_end_time))
-            
-            timeslot_start_time: datetime = utc_to_lst(timeslot.start_time)
-
-            timeslot_id = timeslot.id
-            proposal_id = proposal.id
-
-            try:
-                timeslot_index: int = [schedule[0] for schedule in self.schedules].index(timeslot_id)
-                proposal_index: int = [schedule[1] for schedule in self.schedules].index(proposal_id)
-            except:
-                return True
-
-
-            if not (start_time <= timeslot_start_time and start_end_time >= timeslot_start_time) and (timeslot_index == proposal_index):
-                return False
-        return True
-    
-    def is_night_obs_contraint_met(self, timeslot: Timeslot, proposal: Proposal):
-        night_start_datetime, night_end_datetime = get_night_window(timeslot.start_time.date())
-        if proposal.night_obs and not (night_start_datetime <= timeslot.start_time <= night_end_datetime):
-            return False
-        return True
-    
-    def is_over_schedule_contraint_met(self, timeslot: Timeslot, proposal: Proposal):
-        num_of_timeslots: int = [schedule[1] for schedule in self.schedules].count(proposal.id)
-        if num_of_timeslots * timeslot.get_duration() >= proposal.simulated_duration:
-            return False
-        return True
-
-
-
-    def compute_penalty(self, proposal_id) -> float:
-        global TIME_RESOLUTION
-        penalty: float = 1
-        penalty_factors: list[float] = list([0.95, 0.90, 0.85, 0.80])
-        penalty_factor: float = penalty_factors[0]
-
-        scheduled_time: float = 0.0
-        requested_time: float = 0.0
-        
-        List of contraints
-            - 1. Check for proposal score/priority SCI
-            - 2. Check LST start - start end window
-            - 3. Check for gaps between scheduled proposals
-            - 4. Check for partially allocated proposals
-            - 5. Check for night obs.
-            - 6. Check for avoid sunset/sunrise
-            - 7. Check for min antenna *
-        
-        for schedule in self.schedules:
-            t_id, p_id = schedule
-            unique_proposal_ids: list[int] = list()
-            if p_id is not None and p_id == proposal_id:
-                timeslot = get_timeslot_by_id(t_id)
-                proposal = get_proposal_by_id(p_id)
-
-                # 1. Check for proposal score/priority
-                penalty_factor = penalty_factors[proposal.get_score() - 1]
-
-                # 2. Check LST start - start end window
-                start_time: datetime = utc_to_lst(datetime.combine(timeslot.start_time.date(), proposal.lst_start_time))
-                start_end_time: datetime = utc_to_lst(datetime.combine(timeslot.start_time.date(), proposal.lst_start_end_time))
-
-                timeslot_start_time: datetime = utc_to_lst(timeslot.start_time)
-                if not (start_time <= timeslot_start_time and start_end_time >= timeslot_start_time) and (proposal.id not in unique_proposal_ids):
-                    # Calculate the midpoint
-                    midpoint_start_time: datetime = start_time + (start_end_time - start_time) / 2
-                    
-                    #penalty = 0 # For hard contraints
-                    penalty *= (penalty_factor * 0.1) ** abs((midpoint_start_time - timeslot_start_time).total_seconds() / TIME_RESOLUTION)
-                    
-
-                # 3. Checking gaps between scheduled proposals
-                proposal_timeslot_indexes = self.get_proposal_timeslot_indexes(proposal_id)
-                if proposal.id not in unique_proposal_ids:
-                    penalty *= ((penalty_factor * 0.5) ** (abs((proposal.simulated_duration - timeslot.get_duration() * len(proposal_timeslot_indexes)) / TIME_RESOLUTION))) # Apply penalty for partially allocated proposal
-                
-                # 4. Checking partially allocated proposals
-                penalty *= (penalty_factor ** ((1 - (min(proposal_timeslot_indexes) + len(proposal_timeslot_indexes) - max(proposal_timeslot_indexes))) / TIME_RESOLUTION)) # Apply penalty for gaps of a partially allocated proposal
-        
-
-                # 5. Check for night obs.
-                night_start_datetime, night_end_datetime = get_night_window(timeslot.start_time.date())
-
-                # Check if the proposal requires night observation and if the timeslot is outside the night window
-                if proposal.night_obs and not (night_start_datetime <= timeslot.start_time <= night_end_datetime):
-                    # Calculate the midpoint of the night window
-                    night_midpoint_datetime = night_start_datetime + (night_end_datetime - night_start_datetime) / 2
-                    
-                    # Calculate the midpoint of the timeslot
-                    timeslot_midpoint_datetime = timeslot.start_time + (timeslot.end_time - timeslot.start_time) / 2
-                    
-                    # Calculate the penalty based on the difference from the night midpoint
-                    penalty *= ((penalty_factor * 0.1) ** abs((timeslot_midpoint_datetime - night_midpoint_datetime).total_seconds() / TIME_RESOLUTION))
-                    #penalty = 0 # For hard contraints
-
-                    # 6. Check for avoid sunset/sunrise
-                    if proposal.avoid_sunrise_sunset:
-                        sunrise_datetime, sunset_datetime = get_sunrise_sunset(timeslot.start_time.date())
-                        
-                        # Create a list of sunrise and sunset datetimes
-                        sun_events = [sunrise_datetime, sunset_datetime]
-
-                        # Check if timeslot overlaps with any sun event
-                        for event_datetime in sun_events:
-                            if timeslot.start_time <= event_datetime <= timeslot.end_time:
-                                # Apply penalty based on the difference between the midpoint and the clashing event
-                                #penalty = 0 # For hard contraints
-                                penalty *= (penalty_factor * 0.1) ** abs((timeslot_midpoint_datetime - event_datetime).total_seconds() / TIME_RESOLUTION)
-                                break  # Exit loop after applying penalty for the first overlapping event
-
-
-
-                # 7. Check for min antenna *
-                pass
-
-                
-                if proposal_id is not None:
-                    scheduled_time += timeslot.get_duration()
-                if proposal.id not in unique_proposal_ids:
-                    requested_time += proposal.simulated_duration
-                    unique_proposal_ids.append(proposal.id)
-        # 8. Compared scheduled used time with requestsed time
-        penalty *= scheduled_time / requested_time
-        
-        return penalty
-    
-    def score(self):
-        score: float = 0.0
-        #total_duration: float = 0.0
-        for schedule in self.schedules:
-            timeslot_id, proposal_id = schedule
-            if proposal_id is not None:
-                proposal = get_proposal_by_id(proposal_id)
-                #timeslot = get_timeslot_by_id(timeslot_id)
-                #score += proposal.score * self.compute_penalty(proposal_id)
-                score += self.compute_penalty(proposal_id)
-        return score #/ total_duration
-
-    
-    def crossover(self, schedules: list[list[int]]) -> list[list[int]]:
-        offspring_schedules: list[list[int]] = list()
-        for schedule_1, schedule_2 in zip(self.schedules, schedules):
-            offspring_schedules.append(schedule_1 if random.random() > 0.5 else schedule_2)
-        return offspring_schedules
-    
-    def mutation(self, mutation_rate=0.2) -> None:
-        global PROPOSALS
-        num_of_mutable_schedules: int = int(len(self.schedules) * mutation_rate)
-        for _ in range(num_of_mutable_schedules):
-            mutation_index = random.randint(0, len(self.schedules) - 1)
-            proposal_id: int = None
-            timeslot_id: int = self.schedules[mutation_index][0]
-            if random.random() < 0.75:
-                for _ in range(6):
-                    proposal: Proposal = random.choice(PROPOSALS)
-                    if self.all_hard_contraints_met(get_timeslot_by_id(timeslot_id), proposal):
-                        proposal_id = proposal.id
-            self.schedules[mutation_index] =  list([timeslot_id, proposal_id])
-
-          
-    def remove_partialy_allocated_proposals(self) -> None:
+    def remove_clashing_proposals(self) -> None:
         return
     
-    def display(self) -> None:
-        # Create a figure and axis
-        fig, ax = plt.subplots(figsize=(24, 12))
-
-        # Set the x-axis ticks to weekdays
-        weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-        ax.set_xticks(np.arange(len(weekdays)) + 0.5)
-        ax.set_xticklabels(weekdays, ha='center')
-        ax.set_xlim(-0.5, len(weekdays) + 0.5)  # Add this line to ensure the last block is aligned
-
-        # Set the y-axis ticks to timeslots
-        start_time = min(get_timeslot_by_id(timeslot_id).start_time for timeslot_id, _ in self.schedules)
-        end_time = max(get_timeslot_by_id(timeslot_id).end_time for timeslot_id, _ in self.schedules)
-        time_range = [start_time.replace(hour=h, minute=0) for h in range(24)]
-        ax.set_yticks(np.arange(len(time_range)))
-        ax.set_yticklabels([t.strftime('%H:%M') for t in time_range])
-        ax.set_ylim(0, 23 + 1)
-
-        # Plot the scheduled proposals
-        owner_colors = {}
-        unique_proposals = []
-        for i, (timeslot_id, proposal_id) in enumerate(self.schedules):
-            timeslot: Timeslot = get_timeslot_by_id(timeslot_id)
-            proposal: Proposal = get_proposal_by_id(proposal_id)
-            if proposal:
-                # Check if proposal doesn't exist in our unique proposals list
-                if proposal.id not in unique_proposals:
-                    unique_proposals.append(proposal.id)
-
-                # Calculate the position of the proposal on the grid
-                weekday = timeslot.start_time.weekday()
-                time_index = timeslot.start_time.hour
-
-                # Determine the color based on the proposal ID
-                color = f'C{PROPOSALS.index(proposal)}'
-
-                # Add a rectangle for the proposal
-                rect = matplotlib.patches.Rectangle(((weekday + 1) % 7, time_index), 1, 1, facecolor=color, alpha=0.5, edgecolor='black', linewidth=1)
-                ax.add_patch(rect)
-
-               
-                ax.text((weekday + 1) % 7 + 0.5, time_index + 0.5, proposal.owner_email, ha='center', va='center', color='white')
-
-        # Add a legend
-        #legend_patches = [plt.Rectangle((0, 0), 1, 1, facecolor=f'C{i}', alpha=0.5, edgecolor='black', linewidth=2) for i in range(len(unique_proposals))]
-        #legend_labels = [f'Proposal {i}' for i in unique_proposals]
-        #ax.legend(legend_patches, legend_labels, loc='upper left', bbox_to_anchor=(1.05, 1))
-
-        # Set the title and axis labels
-        ax.set_title('Timetable')
-        ax.set_xlabel('Weekday')
-        ax.set_ylabel('Time')
-
-        # Display the plot
-        plt.savefig(f"outputs/timetable_{datetime.now()}.png")
-
-        # Print the textual output
-        for timeslot_id, proposal_id in self.schedules:
-            timeslot = get_timeslot_by_id(timeslot_id)
-            proposal = get_proposal_by_id(proposal_id)
-            if timeslot.start_time.hour == 0:
-                print("--------------------------------")
-                print(f"{timeslot.start_time.strftime('%d %B %Y')}")
-            print(f"\t{timeslot.start_time.strftime('%H:%M')} - {timeslot.end_time.strftime('%H:%M')}\t", end="")
-            if proposal:
-                print(proposal.owner_email, proposal.simulated_duration // (60 * 60))
-            else:
-                print("")
-
-        print(f"Fitness: {self.score():.2f}\n")
-    """
 
     def display(self) -> None:
         # Create a figure and axis
@@ -675,7 +440,7 @@ class Timetable:
     def plot(self, filename='weekly_timetable.png'):
         # Define days of the week and colors
         days_of_week = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-        colors = ['gray', 'yellow', 'blue', 'green', 'brown', 'pink', 
+        colors = ['gray', 'yellow', 'blue', 'red', 'green', 'brown', 'pink', 
                   'lightgreen', 'lightblue', 'wheat', 'salmon', 'lightcoral', 'lightyellow']
 
         # Create a figure for plotting
@@ -733,7 +498,7 @@ class Timetable:
                             ha='center', va='center', fontsize=10, color='black')
 
                 # Add to legend with index and email
-                legend_key = f"{idx}: {proposal.owner_email} {(proposal.simulated_duration / (60.0 * 60.0)):0.2f}"
+                legend_key = f'{idx} {proposal.lst_start_time.strftime("%H:%M:%S")} {proposal.lst_start_end_time.strftime("%H:%M:%S")} {proposal.night_obs} {proposal.avoid_sunrise_sunset}'
                 if legend_key not in legend_dict:
                     legend_dict[legend_key] = color
 
@@ -857,7 +622,7 @@ class GeneticAlgorithm():
     def get_best_fit_timetable(self) -> Timetable:
         # Sort timetables by score and return the best one
         self.timetables.sort(key=lambda timetable: timetable.compute_score(), reverse=True)
-        self.timetables[0].remove_partialy_allocated_proposals()
+        self.timetables[0].remove_clashing_proposals()
         return self.timetables[0]
 
 
@@ -865,6 +630,7 @@ def main():
     global TIMESLOTS, PROPOSALS, MIN_DATE, MAX_DATE
     MIN_DATE = date(2025, 2, 9)
     MAX_DATE = date(2025, 2, 15)
+    #proposals: list[Proposal] = read_proposals_from_csv('./proposals/csv/ProdObsList1743669829782.csv')
     proposals: list[Proposal] = read_proposals_from_csv('./proposals/csv/ObsList1737538994939.csv')
     random.shuffle(proposals) # Shaffle the proposals
 
@@ -872,8 +638,16 @@ def main():
     cumulative_week_duration: int = 0
     for proposal in proposals:
         cumulative_week_duration += proposal.simulated_duration
-        if cumulative_week_duration > total_week_duration * 0.9:
+        if cumulative_week_duration > total_week_duration * 0.75:
             break
+        if proposal.night_obs or proposal.avoid_sunrise_sunset:
+            for day in range((MAX_DATE - MIN_DATE).days):
+                min_datetime = lst_to_utc(MIN_DATE + timedelta(days=day), proposal.lst_start_time)
+                max_datetime = lst_to_utc((MIN_DATE + timedelta(days=day)), proposal.lst_start_end_time)
+                for start_datetime in [min_datetime, max_datetime]:
+                    end_datetime = start_datetime + timedelta(seconds=proposal.simulated_duration)
+                    night_start_datetime, night_end_datetime = get_night_window(MIN_DATE + timedelta(days=day))
+                    pass
         PROPOSALS.append(proposal)
     TIMESLOTS = generate_timeslots(MIN_DATE, MAX_DATE)
 
@@ -901,7 +675,7 @@ def main():
     """
 
     print("Generating Timetable using Genetic Algorithim")
-    genetic_algorithm: GeneticAlgorithm = GeneticAlgorithm(10, 500)
+    genetic_algorithm: GeneticAlgorithm = GeneticAlgorithm(20, 250)
     best_timetable: Timetable = genetic_algorithm.get_best_fit_timetable()
     best_timetable.display()
     best_timetable.plot(filename=f'outputs/week {MIN_DATE.strftime("%m-%d-%Y")} to {MAX_DATE.strftime("%m-%d-%Y")} timetable.png')
