@@ -64,8 +64,6 @@ def read_proposals_from_csv(file_path: str) -> list[Proposal]:
                 int(row['simulated_duration']),
                 get_score(str(row['proposal_id']))
             ))
-            if str(row['night_obs']).lower() == "yes":
-                print(id)
                 
     
     return proposals
@@ -98,44 +96,11 @@ def generate_timeslots(start_date: date, end_date: date, timeslot_duration: int 
 #]
 
 
-def get_timeslot_by_id(timeslot_id: int) -> Timeslot:
-    global TIMESLOTS
-    return next((t for t in TIMESLOTS if t.id == timeslot_id), None)
 
 def get_proposal_by_id(proposal_id: int) -> Proposal:
     global PROPOSALS
     return next((p for p in PROPOSALS if p.id == proposal_id), None)
 
-def utc_to_lst(utc_datetime: datetime) -> datetime:
-    """
-    Convert UTC datetime to Local Sidereal Time (LST) datetime.
-    
-    Parameters:
-    utc_datetime (datetime): The UTC datetime object to be converted.
-    
-    Returns:
-    datetime: The corresponding LST datetime object.
-    """
-    # Get the longitude and latitude of the location (in degrees)
-    longitude = 18.478847  # Cape Town longitude
-    latitude = -33.944382  # Cape Town latitude
-
-    # Calculate the Sidereal Time at Greenwich (GST) in hours
-    gst_hours = (utc_datetime.timetuple().tm_year,
-                 utc_datetime.timetuple().tm_yday,
-                 utc_datetime.hour + utc_datetime.minute / 60 + utc_datetime.second / 3600)
-    gst_hours = (18.697374558 + 24.06570982441908 * (gst_hours[0] - 2000) + 0.000026 * (gst_hours[0] - 2000) ** 2 + 1.0027379093 * gst_hours[1] + gst_hours[2]) % 24
-
-    # Convert GST to LST
-    lst_hours = (gst_hours + longitude / 15) % 24
-
-    # Convert LST hours to LST datetime
-    lst_datetime = utc_datetime.replace(hour=int(lst_hours),
-                                       minute=int((lst_hours % 1) * 60),
-                                       second=int((lst_hours % 1) * 3600) % 60,
-                                       microsecond=0)
-
-    return lst_datetime
 
 def lst_to_utc(date: date, lst_time: time) -> datetime:
     return datetime.combine(date, lst_time)
@@ -417,7 +382,7 @@ class Timetable:
         ax.set_ylabel('Time')
 
         # Display the plot
-        plt.savefig(f"outputs/timetable_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png")
+        #plt.savefig(f"outputs/timetable_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png")
 
         # Print the textual output
         for proposal_id, start_datetime in self.schedules:
@@ -457,7 +422,7 @@ class Timetable:
         for idx, (proposal_id, start_datetime) in enumerate(self.schedules):
             if start_datetime is not None:
                 scheduled_proposals += 1  # Count scheduled proposals
-                proposal = get_proposal_by_id(proposal_id)
+                proposal: Proposal = get_proposal_by_id(proposal_id)
                 end_datetime = start_datetime + timedelta(seconds=proposal.simulated_duration)
 
                 # Calculate the day of the week and time for plotting
@@ -498,7 +463,7 @@ class Timetable:
                             ha='center', va='center', fontsize=10, color='black')
 
                 # Add to legend with index and email
-                legend_key = f'{idx} {proposal.lst_start_time.strftime("%H:%M:%S")} {proposal.lst_start_end_time.strftime("%H:%M:%S")} {proposal.night_obs} {proposal.avoid_sunrise_sunset}'
+                legend_key = f'{idx} {proposal.owner_email} {proposal.lst_start_time.strftime("%H:%M:%S")} {proposal.lst_start_end_time.strftime("%H:%M:%S")} {proposal.night_obs} {proposal.avoid_sunrise_sunset}'
                 if legend_key not in legend_dict:
                     legend_dict[legend_key] = color
 
@@ -624,32 +589,59 @@ class GeneticAlgorithm():
         self.timetables.sort(key=lambda timetable: timetable.compute_score(), reverse=True)
         self.timetables[0].remove_clashing_proposals()
         return self.timetables[0]
+    
+def can_schedule_proposal(proposal: Proposal) -> bool:
+    """Check if a proposal can be scheduled based on its constraints."""
+    for day in range((MAX_DATE - MIN_DATE).days + 1):  # Include the last day
+        # Get the night window for the current day
+        night_start_datetime, night_end_datetime = get_night_window(MIN_DATE + timedelta(days=day))
+        sunrise_datetime, sunset_datetime = get_sunrise_sunset(MIN_DATE + timedelta(days=day))
+
+        # Prepare the start times
+        min_start_datetime = lst_to_utc(MIN_DATE + timedelta(days=day), proposal.lst_start_time)
+        max_start_datetime = lst_to_utc(MIN_DATE + timedelta(days=day), proposal.lst_start_end_time)
+
+        # Check both start times for night observations
+        for start_datetime in [min_start_datetime, max_start_datetime]:
+            # Check if scheduling within the night window is possible
+            if proposal.night_obs:
+                if not (start_datetime >= night_start_datetime and 
+                        start_datetime + timedelta(seconds=proposal.simulated_duration) <= night_end_datetime):
+                    return False  # Constraint not met
+
+            # Check for sunrise/sunset avoidance
+            if proposal.avoid_sunrise_sunset:
+                if not (start_datetime + timedelta(seconds=proposal.simulated_duration) <= sunrise_datetime or 
+                        start_datetime >= sunset_datetime):
+                    return False  # Constraint not met
+
+    return True  # All constraints met
+
+
 
 
 def main():
-    global TIMESLOTS, PROPOSALS, MIN_DATE, MAX_DATE
+    global PROPOSALS, MIN_DATE, MAX_DATE
     MIN_DATE = date(2025, 2, 9)
     MAX_DATE = date(2025, 2, 15)
-    #proposals: list[Proposal] = read_proposals_from_csv('./proposals/csv/ProdObsList1743669829782.csv')
-    proposals: list[Proposal] = read_proposals_from_csv('./proposals/csv/ObsList1737538994939.csv')
+    proposals: list[Proposal] = read_proposals_from_csv('./proposals/csv/ProdObsList1743669829782.csv')
+    #proposals: list[Proposal] = read_proposals_from_csv('./proposals/csv/ObsList1737538994939.csv')
     random.shuffle(proposals) # Shaffle the proposals
 
     total_week_duration: int = (MAX_DATE - MIN_DATE - timedelta(days=1)).total_seconds()
     cumulative_week_duration: int = 0
     for proposal in proposals:
-        cumulative_week_duration += proposal.simulated_duration
-        if cumulative_week_duration > total_week_duration * 0.75:
-            break
+        # Check if the proposal can be scheduled
+        if not can_schedule_proposal(proposal):
+            continue  # Skip this proposal if it cannot be scheduled
         if proposal.night_obs or proposal.avoid_sunrise_sunset:
-            for day in range((MAX_DATE - MIN_DATE).days):
-                min_datetime = lst_to_utc(MIN_DATE + timedelta(days=day), proposal.lst_start_time)
-                max_datetime = lst_to_utc((MIN_DATE + timedelta(days=day)), proposal.lst_start_end_time)
-                for start_datetime in [min_datetime, max_datetime]:
-                    end_datetime = start_datetime + timedelta(seconds=proposal.simulated_duration)
-                    night_start_datetime, night_end_datetime = get_night_window(MIN_DATE + timedelta(days=day))
-                    pass
+            print(proposal.owner_email)
+        cumulative_week_duration += proposal.simulated_duration
+        if cumulative_week_duration > total_week_duration * 0.9:
+            break
+
+        # If the proposal is valid, add it to the scheduled proposals
         PROPOSALS.append(proposal)
-    TIMESLOTS = generate_timeslots(MIN_DATE, MAX_DATE)
 
     """
     print("Desplaying Randomly Generated Timetable...")
@@ -675,7 +667,7 @@ def main():
     """
 
     print("Generating Timetable using Genetic Algorithim")
-    genetic_algorithm: GeneticAlgorithm = GeneticAlgorithm(20, 250)
+    genetic_algorithm: GeneticAlgorithm = GeneticAlgorithm(10, 1000)
     best_timetable: Timetable = genetic_algorithm.get_best_fit_timetable()
     best_timetable.display()
     best_timetable.plot(filename=f'outputs/week {MIN_DATE.strftime("%m-%d-%Y")} to {MAX_DATE.strftime("%m-%d-%Y")} timetable.png')
