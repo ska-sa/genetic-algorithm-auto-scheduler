@@ -148,17 +148,18 @@ class Timetable:
             self.schedules = schedules
 
     def all_constraints_met(self, proposal: Proposal, start_datetime: datetime) -> bool:
-        return self.night_obs_contraint_met(proposal, start_datetime) and self.avoid_sunrise_sunset_contraint_met(proposal, start_datetime)
+        
+        return self.night_obs_constraint_met(proposal, start_datetime) and self.avoid_sunrise_sunset_contraint_met(proposal, start_datetime)
     
-    def night_obs_contraint_met(self, proposal: Proposal, start_datetime: datetime) -> bool:
+    def night_obs_constraint_met(self, proposal: Proposal, start_datetime: datetime) -> bool:
         if proposal.night_obs:
             # Compute end datetime based on simulated duration
-            end_datetime = start_datetime + timedelta(minutes=proposal.simulated_duration)
+            end_datetime = start_datetime + timedelta(seconds=proposal.simulated_duration)
             night_start_datetime, night_end_datetime = get_night_window(start_datetime.date())
 
-            # Check if both start and end datetimes are outside the night window
-            if (start_datetime < night_start_datetime and end_datetime < night_start_datetime) or \
-               (start_datetime > night_end_datetime and end_datetime > night_end_datetime):
+            # Check if both start and end datetimes fall within the night window
+            if night_start_datetime <= start_datetime <= night_end_datetime and \
+            night_start_datetime <= end_datetime <= night_end_datetime:
                 return True  # Constraint met
             return False  # Constraint not met
         return True  # If night observations are not required, constraint is met
@@ -196,7 +197,7 @@ class Timetable:
             end_datetime = start_datetime + timedelta(seconds=proposal.simulated_duration)
             #if start_datetime.weekday() == 3 or end_datetime.weekday() == 3: # Skip Wednsday
             #    continue
-
+            
             # Check if all constraints are met
             if self.all_constraints_met(proposal, start_datetime):
                 return start_datetime
@@ -215,7 +216,7 @@ class Timetable:
 
         # If the end time is less than the start time, it means it wraps to the next day
         if end_seconds < start_seconds:
-            end_seconds += 24 * 3600  # Add 24 hours in seconds to end_time
+            end_seconds += 24 * 60 * 60  # Add 24 hours in seconds to end_time
 
         # Generate a random time in seconds between start and end
         random_seconds = random.randint(start_seconds, end_seconds)
@@ -328,79 +329,6 @@ class Timetable:
     def remove_clashing_proposals(self) -> None:
         return
     
-
-    def display(self) -> None:
-        # Create a figure and axis
-        fig, ax = plt.subplots(figsize=(24, 12))
-
-        # Set the x-axis ticks to weekdays
-        weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-        ax.set_xticks(np.arange(len(weekdays)) + 0.5)
-        ax.set_xticklabels(weekdays, ha='center')
-        ax.set_xlim(-0.5, len(weekdays) + 0.5)  # Ensure the last block is aligned
-
-        # Determine the time range for the y-axis
-        start_time = min(schedule[1] for schedule in self.schedules if schedule[1] is not None).replace(hour=0, minute=0)
-        end_time = max(schedule[1] + timedelta(seconds=get_proposal_by_id(schedule[0]).simulated_duration) 
-                    for schedule in self.schedules if schedule[1] is not None)
-        time_range = [start_time + timedelta(hours=h) for h in range(24)]
-        ax.set_yticks(np.arange(len(time_range)))
-        ax.set_yticklabels([t.strftime('%H:%M') for t in time_range])
-        ax.set_ylim(0, 23 + 1)
-
-        # Plot the scheduled proposals
-        unique_proposals = {}
-        for i, (proposal_id, start_datetime) in enumerate(self.schedules):
-            if start_datetime is not None:
-                proposal = get_proposal_by_id(proposal_id)
-                if proposal:
-                    # Calculate the position of the proposal on the grid
-                    weekday = start_datetime.weekday()
-                    time_index = start_datetime.hour
-
-                    # Determine the color based on the proposal ID
-                    color = f'C{random.randint(0, 10)}' 
-
-                    # Add a rectangle for the proposal
-                    rect = matplotlib.patches.Rectangle((weekday + 1, time_index), 1, 1, facecolor=color, alpha=0.75, edgecolor='black', linewidth=2)
-                    ax.add_patch(rect)
-
-                    # Add text for the proposal
-                    ax.text(weekday + 1 + 0.5, time_index + 0.5, proposal.owner_email, ha='center', va='center', color='white')
-
-                    # Store unique proposals for legend
-                    unique_proposals[proposal_id] = proposal.owner_email
-
-        # Add a legend
-        legend_patches = [plt.Rectangle((0, 0), 1, 1, facecolor=f'C{i % 10}', alpha=0.5, edgecolor='black', linewidth=2) for i in unique_proposals.keys()]
-        legend_labels = [f'Proposal {pid}' for pid in unique_proposals.keys()]
-        ax.legend(legend_patches, legend_labels, loc='upper left', bbox_to_anchor=(1.05, 1))
-
-        # Set the title and axis labels
-        ax.set_title('Timetable')
-        ax.set_xlabel('Weekday')
-        ax.set_ylabel('Time')
-
-        # Display the plot
-        #plt.savefig(f"outputs/timetable_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png")
-
-        # Print the textual output
-        for proposal_id, start_datetime in self.schedules:
-            if start_datetime is not None:
-                proposal = get_proposal_by_id(proposal_id)
-                end_time = start_datetime + timedelta(seconds=proposal.simulated_duration)
-                if start_datetime.hour == 0:
-                    print("--------------------------------")
-                    print(f"{start_datetime.strftime('%d %B %Y')}")
-                print(f"\t{start_datetime.strftime('%H:%M')} - {end_time.strftime('%H:%M')}\t", end="")
-                if proposal:
-                    print(proposal.owner_email, proposal.simulated_duration // (60 * 60))
-                else:
-                    print("")
-            else:
-                print(f"Proposal ID {proposal_id} is not scheduled.")
-
-        print(f"Fitness: {self.compute_score():.2f}\n")
 
     def plot(self, filename='weekly_timetable.png'):
         # Define days of the week and colors
@@ -624,8 +552,8 @@ def main():
     global PROPOSALS, MIN_DATE, MAX_DATE
     MIN_DATE = date(2025, 2, 9)
     MAX_DATE = date(2025, 2, 15)
-    proposals: list[Proposal] = read_proposals_from_csv('./proposals/csv/ProdObsList1743669829782.csv')
-    #proposals: list[Proposal] = read_proposals_from_csv('./proposals/csv/ObsList1737538994939.csv')
+    #proposals: list[Proposal] = read_proposals_from_csv('./proposals/csv/ProdObsList1743669829782.csv')
+    proposals: list[Proposal] = read_proposals_from_csv('./proposals/csv/ObsList1737538994939.csv')
     random.shuffle(proposals) # Shaffle the proposals
 
     total_week_duration: int = (MAX_DATE - MIN_DATE - timedelta(days=1)).total_seconds()
@@ -633,11 +561,13 @@ def main():
     for proposal in proposals:
         # Check if the proposal can be scheduled
         if not can_schedule_proposal(proposal):
+            print(proposal.owner_email, proposal.night_obs, proposal.)
             continue  # Skip this proposal if it cannot be scheduled
         if proposal.night_obs or proposal.avoid_sunrise_sunset:
             print(proposal.owner_email)
+        
         cumulative_week_duration += proposal.simulated_duration
-        if cumulative_week_duration > total_week_duration * 0.9:
+        if cumulative_week_duration > total_week_duration * 1.25:
             break
 
         # If the proposal is valid, add it to the scheduled proposals
@@ -646,7 +576,7 @@ def main():
     """
     print("Desplaying Randomly Generated Timetable...")
     timetable = Timetable()
-    timetable.display()
+    timetable.plot(filename=f'outputs/week timetable')
 
     print("Crossover...")
     parent_timetable_1: Timetable = Timetable()
@@ -669,7 +599,6 @@ def main():
     print("Generating Timetable using Genetic Algorithim")
     genetic_algorithm: GeneticAlgorithm = GeneticAlgorithm(10, 1000)
     best_timetable: Timetable = genetic_algorithm.get_best_fit_timetable()
-    best_timetable.display()
     best_timetable.plot(filename=f'outputs/week {MIN_DATE.strftime("%m-%d-%Y")} to {MAX_DATE.strftime("%m-%d-%Y")} timetable.png')
     
 if __name__ == "__main__":
