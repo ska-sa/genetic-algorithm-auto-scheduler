@@ -277,7 +277,7 @@ class Timetable:
         numerator = 0
         denominator = 1
 
-        total_non_clash_time = total_time - min(total_time * 0.5, total_clash_time * 25) # scalling up the clash time to increase it impact
+        total_non_clash_time = total_time - min(total_time * 0.75, total_clash_time * 75) # scalling up the clash time to increase it impact
         total_num_scheduled_proposals = total_num_proposals - total_num_unscheduled_proposals
         if total_time > total_num_proposals:
             scaler = total_time / total_num_proposals
@@ -553,7 +553,8 @@ def main():
     MIN_DATE = date(2025, 2, 9)
     MAX_DATE = date(2025, 2, 15)
     #proposals: list[Proposal] = read_proposals_from_csv('./proposals/csv/ProdObsList1743669829782.csv')
-    proposals: list[Proposal] = read_proposals_from_csv('./proposals/csv/ObsList1737538994939.csv')
+    #proposals: list[Proposal] = read_proposals_from_csv('./proposals/csv/ObsList1737538994939.csv')
+    proposals: list[Proposal] = read_proposals_from_csv('./proposals/csv/ObsList.csv')
     random.shuffle(proposals) # Shaffle the proposals
 
     total_week_duration: int = (MAX_DATE - MIN_DATE - timedelta(days=1)).total_seconds()
@@ -567,7 +568,7 @@ def main():
             print(proposal.owner_email)
         
         cumulative_week_duration += proposal.simulated_duration
-        if cumulative_week_duration > total_week_duration * 0.85:
+        if cumulative_week_duration > total_week_duration * 1.5:
             break
 
         # If the proposal is valid, add it to the scheduled proposals
@@ -597,7 +598,7 @@ def main():
     """
 
     print("Generating Timetable using Genetic Algorithim")
-    genetic_algorithm: GeneticAlgorithm = GeneticAlgorithm(10, 5000)
+    genetic_algorithm: GeneticAlgorithm = GeneticAlgorithm(10, 1000)
     best_timetable: Timetable = genetic_algorithm.get_best_fit_timetable()
     best_timetable.plot(filename=f'outputs/week {MIN_DATE.strftime("%m-%d-%Y")} to {MAX_DATE.strftime("%m-%d-%Y")} timetable.png')
     

@@ -1,0 +1,7 @@
+*venv/
+
+*__pycache__/
+
+outputs/timetable*
+
+outputs/*2025.png
