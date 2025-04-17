@@ -1,1 +1,12 @@
 
+version: '3.8'
+
+services:
+  genetic-algorithm-auto-scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/app
+    ports:
+      - "5000:5000"
