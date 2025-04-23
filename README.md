@@ -71,21 +71,7 @@ Make sure you are within the project folder, if not. Then use:
 
 ```cd genetic-algorithm-auto-scheduler```
 
-### Installing the Dependencies
-
-To install the dependecies:
-
-```virtualenv venv```
-
-```. venv/bin/activate```
-
-```venv/bin/python -m pip install -r requirements.txt```
-
 ### Running the Code
-
-To run the project:
-
-```venv/bin/python main.py```
 
 To build a docker image:
 
