@@ -65,7 +65,7 @@ The current manual method of scheduling radio astronomy observations at SARAO is
 
 To clone the project, run the following command in your terminal:
 
-```git clone https://github.com/shlabisa/auto-scheduler.git```
+```git clone https://github.com/ska-sa/genetic-algorithm-auto-scheduler```
 
 Make sure you are within the project folder, if not. Then use:
 
