@@ -1,10 +1,54 @@
-# Auto-Scheduler
+# Genetic Algorithim Auto Scheduler
 
 ## Description
 
-The current manual method of scheduling radio astronomy observations at SARAO is error-prone, time-consuming, and labor-intensive. This has resulted in the underutilization of the telescopes, negatively impacting revenue. The goal of this project is to maximize the utilization of the SARAO telescopes by proposing an auto-scheduler that uses a Genetic Algorithm to schedule observations for the upcoming week without conflicts.
+The current manual method of scheduling radio astronomy observations at South African Radio Astronomy Observatory (SARAO) is erroneous, time-consuming, and labor-intensive. This has resulted in the underutilization of their telescopes, hence negatively impacting revenue. The goal of this project is to maximize the utilization of the SARAO telescopes by proposing an Auto Scheduler that uses a Genetic Algorithm to schedule radio astronmoy observations for the user defined start and end date of the week without compromising any contraints.
 
-## Working principle
+## What is Genetic Algorithm
+
+Genetic Algorithm is a computer science technique that uses natural selection and genetic operations to find the best solution to a problem.
+
+## Genetic Operations
+
+- Encoding of a solution as an Individual.
+- Generating a list of individuals to form a Population.
+- Computing an Individual's fitness in terms of the contraints.
+- Evolution of Individuals in a Population over N generations.
+    - Selection of the fittest Individuals as Parents.
+    - Crossover or Mating, which copies genetic material from Parents to Offsprings.
+    - Mutation, which modifies the genetic material of the generated Offsprings.
+- Decoding the fittest individuals after N generation, yielding to be best solution.
+
+## Advanatges of GA
+
+- Global optimization: as it explore the entire solution space, hence avoiding local optima.
+- Adaptability and versatility: as it can be adapted to various optimization problems, including those with continuous, discrete, and multi-objective constraints.
+- Parallelism: the population of solutions, allows for easy parallel processing.
+
+## Disadvantages of GA
+
+- Computational Cost: as it can be computationally intensive, especially for large-scale problems.
+- Parameter Tuning: finding the optimal settings for parameters like population size, mutation rate, and crossover probabilities.
+- Lack of Guarantee: as there's no guarantee that a genetic algorithm will converge to a global optimum.
+
+## Contraints
+
+- Proposal's priority or score.
+- Proposal's lst start, and lst start end.
+- Proposal's night observation.
+- Proposal's avoid sunrise and sunset.
+- Plane arrival and depart timeslots*.
+- Proposal's build time*.
+- Proposal's required number of antennas*.
+
+## Objectives
+
+- Implement a script that take predefined start and end date of the week, then read a CSV file of proposals then generate a timetable of those proposals of that week and output the generated timetable as a PNG image.  
+
+## UML CLass Diagrams
+
+## Implementation
+
 - We encode a timetable as a list of list of two integers timeslot id, and proposal id, in this formart.
 - timetable = [[timeslot_0_id, propsal_0_id], ..., [timeslot_n_id, proposal_n_id]]
 - These id's are used to access the the acttual timeslot and proposal from TIMESLOT, and PROPOSALS which containts timeslots and proposals that has the following data fields. 
