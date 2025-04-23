@@ -71,15 +71,15 @@ Make sure you are within the project folder, if not. Then use:
 
 ```cd genetic-algorithm-auto-scheduler```
 
-### Running the Code
+## Running the Code
 
 To build a docker image:
 
-```docker build -t auto-schedular .```
+```docker build -t genetic-algorithm-auto-scheduler .```
 
 To run the docker image:
 
-```docker run auto-schedular```
+```docker run genetic-algorithm-auto-scheduler```
 
 ### Contributing
 
