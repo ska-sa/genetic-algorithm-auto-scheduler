@@ -65,35 +65,21 @@ The current manual method of scheduling radio astronomy observations at SARAO is
 
 To clone the project, run the following command in your terminal:
 
-```git clone https://github.com/shlabisa/auto-scheduler.git```
+```git clone https://github.com/ska-sa/genetic-algorithm-auto-scheduler```
 
 Make sure you are within the project folder, if not. Then use:
 
-```cd Auto-Sheduler```
+```cd genetic-algorithm-auto-scheduler```
 
-### Installing the Dependencies
-
-To install the dependecies:
-
-```virtualenv venv```
-
-```. venv/bin/activate```
-
-```venv/bin/python -m pip install -r requirements.txt```
-
-### Running the Code
-
-To run the project:
-
-```venv/bin/python main.py```
+## Running the Code
 
 To build a docker image:
 
-```docker build -t auto-schedular .```
+```docker build -t genetic-algorithm-auto-scheduler .```
 
 To run the docker image:
 
-```docker run auto-schedular```
+```docker run genetic-algorithm-auto-scheduler```
 
 ### Contributing
 
