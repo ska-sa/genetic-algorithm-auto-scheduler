@@ -69,7 +69,7 @@ To clone the project, run the following command in your terminal:
 
 Make sure you are within the project folder, if not. Then use:
 
-```cd Auto-Sheduler```
+```cd genetic-algorithm-auto-scheduler```
 
 ### Installing the Dependencies
 
