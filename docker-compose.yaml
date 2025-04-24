@@ -2,7 +2,9 @@
 version: '3.8'
 
 services:
-  genetic-algorithm-auto-scheduler:
+  ga_scheduler:
+    image: ga_scheduler_image
+    container_name: ga_scheduler_container
     build:
       context: .
       dockerfile: Dockerfile
