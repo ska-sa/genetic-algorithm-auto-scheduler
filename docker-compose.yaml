@@ -1,14 +1,11 @@
-
 version: '3.8'
 
 services:
-  ga_scheduler:
-    image: ga_scheduler_image
-    container_name: ga_scheduler_container
+  ga-scheduler:
+    image: ga-scheduler-image
+    container_name: ga-scheduler-container
     build:
       context: .
       dockerfile: Dockerfile
     volumes:
-      - .:/app
-    ports:
-      - "5000:5000"
+      - ~/Desktop:/app/outputs
