@@ -45,7 +45,16 @@ Genetic Algorithm is a computer science technique that uses natural selection an
 
 - Implement a script that take predefined start and end date of the week, then read a CSV file of proposals then generate a timetable of those proposals of that week and output the generated timetable as a PNG image.  
 
-## UML CLass Diagrams
+## System Design
+
+### Decomposition
+![](res/decomposition.png)
+
+### Use Case
+
+![](res/use-case.png)
+
+### 
 
 ## Implementation
 
