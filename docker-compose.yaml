@@ -8,4 +8,4 @@ services:
       context: .
       dockerfile: Dockerfile
     volumes:
-      - ~/Desktop:/app/outputs
+      - ~/Desktop/images:/app/outputs
