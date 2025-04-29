@@ -81,6 +81,18 @@ To run the docker image:
 
 ```docker run genetic-algorithm-auto-scheduler```
 
+To build an image using docker-compose:
+
+```docker-compose build```
+
+To start the container using docker-compose:
+
+```docker-compose up```
+
+To stop the container using docker-compose:
+
+```docker-compose down```
+
 ### Contributing
 
 Contributions are welcome! Please feel free to submit a pull request or open an issue.
