@@ -54,7 +54,15 @@ Genetic Algorithm is a computer science technique that uses natural selection an
 
 ![](res/use-case.png)
 
-### 
+### User Interface
+
+#### Home Page
+
+![](res/home-page-ui.png)
+
+#### Generate Page
+
+![](res/generate-page-ui.png)
 
 ## Implementation
 
