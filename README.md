@@ -64,6 +64,14 @@ Genetic Algorithm is a computer science technique that uses natural selection an
 
 ![](res/generate-page-ui.png)
 
+### Genetic Algorithim Flow Charts
+
+![](res/ga-flow-chart-1.png)
+
+![](res/ga-flow-chart-2.png)
+
+### UML Class Diagram
+
 ## Implementation
 
 - We encode a timetable as a list of list of two integers timeslot id, and proposal id, in this formart.
