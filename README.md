@@ -48,85 +48,61 @@ Genetic Algorithm is a computer science technique that uses natural selection an
 ## System Design
 
 ### Decomposition
-![](res/decomposition.png)
+
+<div align="center">
+    <img src="res/decomposition.png" alt="Decomposition" />
+</div>
 
 ### Use Case
 
-![](res/use-case.png)
+<div align="center">
+    <img src="res/use-case.png" alt="Use Case" />
+</div>
 
 ### User Interface
 
 #### Home Page
 
-![](res/home-page-ui.png)
+<div align="center">
+    <img src="res/home-page-ui.png" alt="Home Page User Interface" />
+</div>
 
 #### Generate Page
 
-![](res/generate-page-ui.png)
+<div align="center">
+    <img src="res/generate-page-ui.png" alt="Generate Page User Interface" />
+</div>
 
 ### Genetic Algorithim Flow Charts
 
-![](res/ga-flow-chart-1.png)
+<div align="center">
+    <img src="res/ga-flow-chart-1.png" alt="Genetic Algorithim Flow Chart 1" />
+</div>
 
-![](res/ga-flow-chart-2.png)
+<div align="center">
+    <img src="res/ga-flow-chart-2.png" alt="Genetic Algorithm Flow Chart 2" />
+</div>
 
-### UML Class Diagram
+### Working Principles
 
-## Implementation
-
-- We encode a timetable as a list of list of two integers timeslot id, and proposal id, in this formart.
-- timetable = [[timeslot_0_id, propsal_0_id], ..., [timeslot_n_id, proposal_n_id]]
-- These id's are used to access the the acttual timeslot and proposal from TIMESLOT, and PROPOSALS which containts timeslots and proposals that has the following data fields. 
-- timeslot:
--   - id: int
--   - start_dateime: datetime
--   - end_datetime: datetime
-
-- proposal:
--   - id: int
--   - owner_email: str
--   - build_time: int
--   - prefered_dates_start: list[date]
--   - prefered_dates_end: list[date]
--   - avoid_dates_start: list[date]
--   - avoid_dates_end: list[date]
--   - night_obs: bool
--   - avoid_sunrise_sunset: bool
--   - minimum_antennas: int
--   - lst_start_time: time
--   - lst_start_end_time: time
--   - simulated_duration: int
--   - score: int
-
-- We then utilize genetic algorithms processe like:
--   - timetables generation
--   - timetable rating, and selection
--   - timetable cross over
--   - timetable mutation
-
-- It worth noting that the following constraints were considered when calculating the score/fitness of each timtable:
--   - Proposal's score/priority
--   - Proposal's LST start and start end time
--   - Proposal's timeslot gaps
--   - Proposal's number of allocated timeslots compared with its duration
--   - Proposal's night observations condition
--   - Proposal's avoid sunsrise/sunset condition
--   - Proposal's minimum number of antennas compared with available antenna (future work)
-
-- Over a predefined number of generations we get the best fit timetable.
+<div align="center">
+    <img src="res/working-principles.png" alt="" />
+</div>
 
 ## File Structure
 
 - **classes/**: Contains the class definitions used in the project.
 - **outputs/**: Contains the .PNG output images of the generated weakly timetable.
 - **proposals/csv**: Contains the excel spreadsheet of proposals (excluded from git).
+- **res/**: Contains README.md file images.
 - **tests/**: Contains the pytest unit tests for this project.
 - **venv/**: Virtual environment for Python dependencies (excluded from git).
 - **.dockerignore**: Specifies files to ignore when building Docker images.
 - **.gitignore**: Specifies files to ignore in version control.
 - **Dockerfile**: Contains the instructions to build the Docker image for the project.
+- **docker-compose.yaml**: Defines Docker continers configuration.
 - **main.py**: The main entry point for the application.
-- **Makefile**: Defines the custom cli cmd for automate admin task of the project.
+- **Makefile**: Defines the custom CLI cmd for automate admin task of the project.
 - **README.md**: This project description file.
 - **requirements.txt**: Lists the dependencies required for the project.
 
