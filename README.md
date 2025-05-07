@@ -116,7 +116,40 @@ Make sure you are within the project folder, if not. Then use:
 
 ```cd genetic-algorithm-auto-scheduler```
 
+## Addin the CSV FileCreate new directory:
+
+```mkdir -p proposals/csv```
+
+Please download the sensitive CSV file from [Proposals CSV File](https://drive.google.com/file/d/1uKx0ocyvraKuRoVFqLJ_8v3jRMwQrhCL/view).
+
+
+Move the downloaded CSV file in the `proposals/csv` directory.
+
+Rename the file to `ObsList1737538994939.csv`
+
 ## Running the Code
+
+### Using Virtual Environment
+
+To setup virtual environemnts:
+
+```python -m virtualenv venv```
+
+To activate virtual environemnt:
+
+```. venv/bin/activate```
+
+To install dependecies:
+
+```venv/bin/python -m pip install -r requirements.txt```
+
+To run the main script:
+
+```venv/bin/python main-v2.py```
+
+After sucesfuly runnig executing the main script the output image can be found here `outputs/'week 02-09-2025 to 02-15-2025 timetable.png'`
+
+### Using Docker
 
 To build a docker image:
 
