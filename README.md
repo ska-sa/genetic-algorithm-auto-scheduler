@@ -1,49 +1,70 @@
-# Genetic Algorithim Auto Scheduler
+# Genetic Algorithm Auto Scheduler
 
 ## Description
 
-The current manual method of scheduling radio astronomy observations at South African Radio Astronomy Observatory (SARAO) is erroneous, time-consuming, and labor-intensive. This has resulted in the underutilization of their telescopes, hence negatively impacting revenue. The goal of this project is to maximize the utilization of the SARAO telescopes by proposing an Auto Scheduler that uses a Genetic Algorithm to schedule radio astronmoy observations for the user defined start and end date of the week without compromising any contraints.
+- The current manual method of scheduling radio astronomy observations at the South African Radio Astronomy Observatory (SARAO) is erroneous, time-consuming, and labor-intensive. 
 
-## What is Genetic Algorithm
+- This has resulted in the underutilization of their telescopes, hence negatively impacting revenue. 
 
-Genetic Algorithm is a computer science technique that uses natural selection and genetic operations to find the best solution to a problem.
+- The goal of this project is to maximize the utilization of the SARAO telescopes by proposing an Auto Scheduler that uses a Genetic Algorithm (GA) to schedule radio astronomy observations for the user-defined start and end dates of the week without compromising any constraints.
+
+## What is Genetic Algorithm?
+
+- Genetic Algorithm is a computer science technique that uses natural selection and genetic operations to find the best solution to a problem.
 
 ## Genetic Operations
 
 - Encoding of a solution as an Individual.
+
 - Generating a list of individuals to form a Population.
-- Computing an Individual's fitness in terms of the contraints.
-- Evolution of Individuals in a Population over N generations.
-    - Selection of the fittest Individuals as Parents.
-    - Crossover or Mating, which copies genetic material from Parents to Offsprings.
-    - Mutation, which modifies the genetic material of the generated Offsprings.
-- Decoding the fittest individuals after N generation, yielding to be best solution.
 
-## Advanatges of GA
+- Computing an Individual's fitness in terms of the constraints.
 
-- Global optimization: as it explore the entire solution space, hence avoiding local optima.
-- Adaptability and versatility: as it can be adapted to various optimization problems, including those with continuous, discrete, and multi-objective constraints.
-- Parallelism: the population of solutions, allows for easy parallel processing.
+- Evolution of Individuals in a Population over N Generations.
+
+- Selection of the fittest Individuals as Parents.
+
+- Crossover or Mating, which copies genetic material from Parents to Offspring.
+
+- Mutation, which modifies the genetic material of the generated Offspring.
+
+- Decoding the fittest individuals after N Generations, yielding the best solution.
+
+## Advantages of GA
+
+- Global optimization: As it explores the entire solution space, hence avoiding local optima.
+
+- Adaptability and versatility: It can be adapted to various optimization problems, including those with continuous, discrete, and multi-objective constraints.
+
+- Parallelism: The population of solutions allows for easy parallel processing.
 
 ## Disadvantages of GA
 
-- Computational Cost: as it can be computationally intensive, especially for large-scale problems.
-- Parameter Tuning: finding the optimal settings for parameters like population size, mutation rate, and crossover probabilities.
-- Lack of Guarantee: as there's no guarantee that a genetic algorithm will converge to a global optimum.
+- Computational Cost: It can be computationally intensive, especially for large-scale problems.
 
-## Contraints
+- Parameter Tuning: Finding the optimal settings for parameters like population size, mutation rate, and crossover probabilities.
+
+- Lack of Guarantee: There's no guarantee that a genetic algorithm will converge to a global optimum.
+
+## Constraints
 
 - Proposal's priority or score.
+
 - Proposal's lst start, and lst start end.
+
 - Proposal's night observation.
+
 - Proposal's avoid sunrise and sunset.
-- Plane arrival and depart timeslots*.
+
+- Plane arrival and departure timeslots*.
+
 - Proposal's build time*.
+
 - Proposal's required number of antennas*.
 
 ## Objectives
 
-- Implement a script that take predefined start and end date of the week, then read a CSV file of proposals then generate a timetable of those proposals of that week and output the generated timetable as a PNG image.  
+- Implement a script that takes predefined start and end dates of the week, reads a CSV file of proposals, then generates a timetable of those proposals for that week and outputs the generated timetable as a PNG image.
 
 ## System Design
 
@@ -73,7 +94,7 @@ Genetic Algorithm is a computer science technique that uses natural selection an
     <img src="res/generate-page-ui.png" alt="Generate Page User Interface" />
 </div>
 
-### Genetic Algorithim Flow Charts
+### Genetic Algorithm Flow Charts
 
 <div align="center">
     <img src="res/ga-flow-chart-1.png" alt="Genetic Algorithim Flow Chart 1" />
@@ -91,92 +112,106 @@ Genetic Algorithm is a computer science technique that uses natural selection an
 
 ## File Structure
 
-- **classes/**: Contains the class definitions used in the project.
-- **outputs/**: Contains the .PNG output images of the generated weakly timetable.
-- **proposals/csv**: Contains the excel spreadsheet of proposals (excluded from git).
-- **res/**: Contains README.md file images.
-- **tests/**: Contains the pytest unit tests for this project.
-- **venv/**: Virtual environment for Python dependencies (excluded from git).
-- **.dockerignore**: Specifies files to ignore when building Docker images.
-- **.gitignore**: Specifies files to ignore in version control.
-- **Dockerfile**: Contains the instructions to build the Docker image for the project.
-- **docker-compose.yaml**: Defines Docker continers configuration.
-- **main.py**: The main entry point for the application.
-- **Makefile**: Defines the custom CLI cmd for automate admin task of the project.
-- **README.md**: This project description file.
-- **requirements.txt**: Lists the dependencies required for the project.
+- classes/: Contains the class definitions used in the project.
+
+- outputs/: Contains the .PNG output images of the generated weekly timetable.
+
+- proposals/csv: Contains the Excel spreadsheet of proposals (excluded from git).
+
+- res/: Contains README.md file images.
+
+- tests/: Contains the pytest unit tests for this project.
+
+- venv/: Virtual environment for Python dependencies (excluded from git).
+
+- .dockerignore: Specifies files to ignore when building Docker images.
+
+- .gitignore: Specifies files to ignore in version control.
+
+- Dockerfile: Contains the instructions to build the Docker image for the project.
+
+- docker-compose.yaml: Defines Docker container configuration.
+
+- main.py: The main entry point for the application.
+
+- Makefile: Defines the custom CLI commands for automating admin tasks of the project.
+
+- README.md: This project description file.
+
+- requirements.txt: Lists the dependencies required for the project.
 
 ## Cloning the Project
 
-To clone the project, run the following command in your terminal:
+- To clone the project, run the following command in your terminal:
 
 ```git clone https://github.com/ska-sa/genetic-algorithm-auto-scheduler```
 
-Make sure you are within the project folder, if not. Then use:
+- Make sure you are within the project folder, if not. Then use the following command:
 
 ```cd genetic-algorithm-auto-scheduler```
 
-## Addin the CSV FileCreate new directory:
+## Adding the CSV File:
 
 ```mkdir -p proposals/csv```
 
-Please download the sensitive CSV file from [Proposals CSV File](https://drive.google.com/file/d/1uKx0ocyvraKuRoVFqLJ_8v3jRMwQrhCL/view).
+- Please download the sensitive CSV file from [Proposals CSV File](https://drive.google.com/file/d/1uKx0ocyvraKuRoVFqLJ_8v3jRMwQrhCL/view).
 
+- Move the downloaded CSV file into the `proposals/csv` directory.
 
-Move the downloaded CSV file in the `proposals/csv` directory.
-
-Rename the file to `ObsList1737538994939.csv`
+- Rename the file to `ObsList1737538994939.csv`
 
 ## Running the Code
 
 ### Using Virtual Environment
 
-To setup virtual environemnts:
+- To set up virtual environments
 
 ```python -m virtualenv venv```
 
-To activate virtual environemnt:
+- To activate the virtual environment
 
 ```. venv/bin/activate```
 
-To install dependecies:
+- To install ddependencies
 
 ```venv/bin/python -m pip install -r requirements.txt```
 
-To run the main script:
+- To run the main script:
 
 ```venv/bin/python main-v2.py```
 
-After sucesfuly runnig executing the main script the output image can be found here `outputs/'week 02-09-2025 to 02-15-2025 timetable.png'`
+- After successfully running the main script, the output image can be found here: `outputs/'week 02-09-2025 to 02-15-2025 timetable.png'`
 
 ### Using Docker
 
-To build a docker image:
+- To build a Docker image:
 
 ```docker build -t genetic-algorithm-auto-scheduler .```
 
-To run the docker image:
+- To run the Docker image:
 
 ```docker run genetic-algorithm-auto-scheduler```
 
-To build an image using docker-compose:
+- To build an image using Docker Compose:
 
 ```docker-compose build```
 
-To start the container using docker-compose:
+- To start the container using Docker Compose:
 
 ```docker-compose up```
 
-To stop the container using docker-compose:
+- To stop the container using Docker Compose:
 
 ```docker-compose down```
 
 ### Contributing
 
-Contributions are welcome! Please feel free to submit a pull request or open an issue.
+- Contributions are welcome! Please feel free to submit a pull request or open an issue.
 
 ### License
 
-- You can use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software.
+- You can use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the software.
+
 - Attribution is required when using or distributing the code.
-- This software is provided 'as is', without any express or implied warranty. Use at your own risk.
+
+- This software is provided 'as is without any express or implied warranty. Use at your own risk.
