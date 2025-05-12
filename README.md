@@ -42,13 +42,13 @@
 
 ```. venv/bin/activate```
 
-- To install ddependencies
+- To install dependencies
 
 ```venv/bin/python -m pip install -r requirements.txt```
 
 - To run the main script:
 
-```venv/bin/python main-v2.py```
+```venv/bin/python main.py```
 
 - After successfully running the main script, the output image can be found here: `outputs/'week 02-09-2025 to 02-15-2025 timetable.png'`
 
