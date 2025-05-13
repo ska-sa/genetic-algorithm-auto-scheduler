@@ -30,13 +30,15 @@
 
 - Rename the file to `ObsList1737538994939.csv`
 
+- Ensure that the `proposals/csv` directories exist and contain the necessary `ObsList1737538994939.csv` file before moving to the next step.
+
 ### Running the Code
 
 #### Using Virtual Environment
 
 - To set up virtual environments
 
-```python -m virtualenv venv```
+```virtualenv venv```
 
 - To activate the virtual environment
 
@@ -56,11 +58,16 @@
 
 - To build a Docker image:
 
-```docker build -t genetic-algorithm-auto-scheduler .```
+```docker build -t genetic-algorithm-auto-scheduler-image .```
 
 - To run the Docker image:
 
-```docker run genetic-algorithm-auto-scheduler```
+```
+docker run -it --name genetic-algorithm-auto-scheduler-container \
+  -v $(pwd)/outputs:/app/outputs \
+  -v $(pwd)/proposals/csv/ObsList1737538994939.csv:/app/ObsList1737538994939.csv \
+  genetic-algorithm-auto-scheduler-image
+```
 
 - To build an image using Docker Compose:
 
