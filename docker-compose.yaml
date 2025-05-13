@@ -1,11 +1,12 @@
 version: '3.8'
 
 services:
-  ga-scheduler:
-    image: ga-scheduler-image
-    container_name: ga-scheduler-container
+  genetic-algorithm-auto-scheduler:
+    image: genetic-algorithm-auto-scheduler-image-image
+    container_name: genetic-algorithm-auto-scheduler-image-container
     build:
       context: .
       dockerfile: Dockerfile
     volumes:
-      - ~/Desktop/images:/app/outputs
+      - $(pwd)/outputs:/app/outputs
+      - $(pwd)/proposals/csv/ObsList1737538994939.csv:/app/proposals/csv/ObsList1737538994939.csv
