@@ -8,5 +8,5 @@ services:
       context: .
       dockerfile: Dockerfile
     volumes:
-      - $(pwd)/outputs:/app/outputs
-      - $(pwd)/proposals/csv/ObsList1737538994939.csv:/app/proposals/csv/ObsList1737538994939.csv
+      - ./outputs:/app/outputs
+      - ./proposals/csv/ObsList1737538994939.csv:/app/proposals/csv/ObsList1737538994939.csv
