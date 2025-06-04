@@ -1,1 +1,0 @@
-from classes.proposal import Proposal
