@@ -1,0 +1,8 @@
+.nav-link.active {
+  border-bottom: 2px solid #007bff; /* Primary color */
+  color: #007bff; /* Primary color */
+}
+
+.nav-link {
+  transition: border-bottom 0.3s ease;
+}
