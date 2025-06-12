@@ -20,10 +20,17 @@ class Proposal():
     @staticmethod
     def parse_time(time_str: str) -> time:
         """
-        Parse a time string in the format "HH:MM" and return a datetime.time object.
+        Parse a time string in the format "HH:MM" or "HH:MM:SS" and return a datetime.time object.
         """
-        hour, minute = map(int, time_str.split(":"))
-        return time(hour, minute)
+        time_parts = time_str.split(":")
+        if len(time_parts) == 2:
+            hour, minute = map(int, time_parts)
+            return time(hour, minute)
+        elif len(time_parts) == 3:
+            hour, minute, second = map(int, time_parts)
+            return time(hour, minute, second)
+        else:
+            raise ValueError("Invalid time format. Expected 'HH:MM' or 'HH:MM:SS'.")
     
     def get_score(self) -> int:
         return 1
