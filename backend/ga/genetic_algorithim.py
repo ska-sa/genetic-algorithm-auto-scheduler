@@ -39,7 +39,7 @@ class Genetic_Algorithm():
         
             for _ in range(num_offsprings):
                 offspring: Timetable = Timetable(self.start_date, self.end_date, self.proposals, parent_timetable_1.crossover(parent_timetable_2.schedules))
-                offspring.mutation(mutation_rate=0.2)
+                offspring.mutation(mutation_rate=mutation_rate)
                 offsprings.append(offspring)
         
             offsprings.sort(key=lambda timetable: timetable.compute_score(), reverse=True)
