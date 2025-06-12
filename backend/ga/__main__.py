@@ -8,7 +8,7 @@ from .utils import read_proposals_from_csv, filter_proposals_by_date
 def main():
     start_date: date = date(2024, 1, 1)
     end_date: date = date(2024, 1, 22)
-    proposals: list[Proposal] = read_proposals_from_csv('./proposals/csv/ProdObsList1743669829782.csv')
+    proposals: list[Proposal] = read_proposals_from_csv('./proposals/csv/ObsList.csv')
     random.shuffle(proposals)
     filtered_proposals: list[Proposal] = filter_proposals_by_date(proposals, start_date, end_date)
 
