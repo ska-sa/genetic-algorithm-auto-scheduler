@@ -133,14 +133,13 @@ def all_constraints_met(proposal: Proposal, start_datetime: datetime) -> bool:
     Returns:
     bool: True if all constraints are met, False otherwise.
     """
-    return (lst_start_time_constraint_met(proposal, start_datetime) and
-            lst_end_time_constraint_met(proposal, start_datetime + timedelta(seconds=proposal.simulated_duration)) and
+    return (lst_start_end_time_constraint_met(proposal, start_datetime) and
             night_obs_constraint_met(proposal, start_datetime) and
             avoid_sunrise_sunset_contraint_met(proposal, start_datetime))
 
-def lst_start_time_constraint_met(proposal: Proposal, start_datetime: datetime) -> bool:
+def lst_start_end_time_constraint_met(proposal: Proposal, start_datetime: datetime) -> bool:
     """
-    Check if the proposal's start time is within the allowed LST start time.
+    Check if the proposal's start time is within the allowed LST start and end time.
     
     Parameters:
     proposal (Proposal): The proposal to check.
@@ -149,22 +148,9 @@ def lst_start_time_constraint_met(proposal: Proposal, start_datetime: datetime) 
     Returns:
     bool: True if the constraint is met, False otherwise.
     """
-    lst_start_time = lst_to_utc(start_datetime.date(), proposal.lst_start_time)
-    return lst_start_time <= start_datetime
-
-def lst_end_time_constraint_met(proposal: Proposal, end_datetime: datetime) -> bool:
-    """
-    Check if the proposal's end time is within the allowed LST end time.
-    
-    Parameters:
-    proposal (Proposal): The proposal to check.
-    end_datetime (datetime): The proposed end datetime.
-    
-    Returns:
-    bool: True if the constraint is met, False otherwise.
-    """
-    lst_end_time = lst_to_utc(end_datetime.date(), proposal.lst_start_end_time)
-    return end_datetime <= lst_end_time
+    lst_start_time = lst_to_utc(start_datetime.date(), proposal.lst_start_time) 
+    lst_start_end_time = lst_to_utc(start_datetime.date(), proposal.lst_start_end_time)
+    return lst_start_time <= start_datetime and start_datetime <= lst_start_end_time
 
 def night_obs_constraint_met(proposal: Proposal, start_datetime: datetime) -> bool:
     if proposal.night_obs:
