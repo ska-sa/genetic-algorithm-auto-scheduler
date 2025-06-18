@@ -15,7 +15,7 @@ def main():
     #breakpoint()
 
     # Generate the timetable using the genetic algorithm
-    genetic_algorithm: Genetic_Algorithm = Genetic_Algorithm(start_date=start_date, end_date=end_date, proposals=filtered_proposals, num_of_timetables=10, num_of_generations=100)
+    genetic_algorithm: Genetic_Algorithm = Genetic_Algorithm(start_date=start_date, end_date=end_date, proposals=filtered_proposals, num_of_timetables=10, num_of_generations=500)
     # Get the best timetable from the genetic algorithm
     best_timetable: Timetable = genetic_algorithm.get_best_fit_timetable()
     # Print the best timetable
