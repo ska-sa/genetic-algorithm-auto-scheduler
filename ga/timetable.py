@@ -245,7 +245,7 @@ class Timetable:
             ax.legend(handles, legend_dict.keys(), title="Proposals", loc='upper left', bbox_to_anchor=(1, 1))
 
             # Save the plot to a file
-            filename =  f"outputs/week {start_date.strftime('%Y-%m-%d')}-{week_end_date.strftime('%Y-%m-%d')}.png"
+            filename =  f"outputs/week_{week_start_date.strftime('%Y-%m-%d')}-{week_end_date.strftime('%Y-%m-%d')}.png"
             plt.tight_layout()
             plt.savefig(filename, dpi=200)  # Save the figure as a PNG file
             plt.close(fig)  # Close the figure to free up memory
