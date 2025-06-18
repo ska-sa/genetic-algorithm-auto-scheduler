@@ -3,8 +3,7 @@ import csv
 import matplotlib.pyplot as plt
 import numpy as np
 from datetime import datetime, date, time, timedelta
-from classes.timeslot import Timeslot
-from classes.proposal import Proposal
+from .proposal import Proposal
 import copy
 
 
@@ -183,19 +182,6 @@ def avoid_sunrise_sunset_contraint_met(proposal: Proposal, start_datetime: datet
 def get_score(proposal_id: str):
     return random.randint(1, 4) # In future we have to classify proposals to get their actual rates
 
-def generate_timeslots(start_date: date, end_date: date, timeslot_duration: int = 60 * 60) -> list[Timeslot]:
-    timeslots = []
-    current_datetime = datetime.combine(start_date, time.min)
-    end_datetime = datetime.combine(end_date, time.max)
-    timeslot_id = 0
-
-    while current_datetime < end_datetime:
-        end_time = min(current_datetime + timedelta(seconds=timeslot_duration), end_datetime)
-        timeslots.append(Timeslot(timeslot_id, current_datetime, end_time))
-        current_datetime = end_time
-        timeslot_id += 1
-
-    return timeslots
 
 def get_proposal_by_id(proposals: list[Proposal], proposal_id: int) -> Proposal:
     return next((p for p in proposals if p.id == proposal_id), None)
