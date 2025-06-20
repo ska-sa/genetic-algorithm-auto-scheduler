@@ -1,7 +1,7 @@
 from datetime import datetime, date, time
 
 class Proposal():
-    def __init__(self, id: int, owner_email: str, build_time: int, prefered_dates_start: list[date], prefered_dates_end: list[date], avoid_dates_start: list[date], avoid_dates_end: list[date], night_obs: bool, avoid_sunrise_sunset: bool, minimum_antennas: int, lst_start_time: time, lst_start_end_time: time, simulated_duration: int, score: float) -> None:
+    def __init__(self, id: int, owner_email: str, build_time: int, prefered_dates_start: list[date], prefered_dates_end: list[date], avoid_dates_start: list[date], avoid_dates_end: list[date], night_obs: bool, avoid_sunrise_sunset: bool, minimum_antennas: int, lst_start_time: time, lst_start_end_time: time, simulated_duration: int, score: float, scheduled_start_datetime: datetime | None = None) -> None:
         self.id: int = id
         self.owner_email: str = owner_email
         self.build_time: int = build_time
@@ -16,7 +16,7 @@ class Proposal():
         self.lst_start_end_time: time = lst_start_end_time
         self.simulated_duration: int = simulated_duration
         self.score: int = score
-        self.actual_start_datetime: datetime | None = None
+        self.scheduled_start_datetime: datetime | None = scheduled_start_datetime
 
     @staticmethod
     def parse_time(time_str: str) -> time:
