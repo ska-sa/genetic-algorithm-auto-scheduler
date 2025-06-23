@@ -246,3 +246,38 @@ def get_sunrise_sunset(date: date) -> tuple[datetime, datetime]:
     sunrise_datetime = datetime(date.year, date.month, date.day, 6, 0, 0)  # 6:00 AM
     sunset_datetime = datetime(date.year, date.month, date.day, 18, 0, 0)  # 6:00 PM
     return sunrise_datetime, sunset_datetime
+
+def parse_time(time_str: str) -> time:
+    """
+    Parse a time string in the format "HH:MM:SS" or "HH:MM" and return a datetime.time object.
+
+    Args:
+        time_str (str): A string representing time in "HH:MM:SS" or "HH:MM" format.
+
+    Returns:
+        datetime.time: A datetime.time object representing the parsed time.
+
+    Raises:
+        ValueError: If the input string is not in the correct format or represents an invalid time.
+    """
+    try:
+        parts = list(map(int, time_str.split(":")))
+        
+        if len(parts) == 2:  # Format "HH:MM"
+            hour, minute = parts
+            second = 0  # Default seconds to 0
+        elif len(parts) == 3:  # Format "HH:MM:SS"
+            hour, minute, second = parts
+        else:
+            raise ValueError("Time must be in 'HH:MM' or 'HH:MM:SS' format.")
+
+        if hour < 0 or hour > 23:
+            raise ValueError("Hour must be between 0 and 23.")
+        if minute < 0 or minute > 59:
+            raise ValueError("Minute must be between 0 and 59.")
+        if second < 0 or second > 59:
+            raise ValueError("Second must be between 0 and 59.")
+
+        return time(hour, minute, second)
+    except ValueError as e:
+        raise ValueError(f"Invalid time format: {time_str}. Error: {e}")
