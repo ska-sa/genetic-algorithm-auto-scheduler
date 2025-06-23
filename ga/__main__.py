@@ -6,15 +6,15 @@ from ga.proposal import Proposal
 # from .utils import read_proposals_from_csv, filter_proposals_by_date
 
 def main():
-    # start_date: date = date(2024, 1, 1)
-    # end_date: date = date(2024, 1, 22)
+    start_date: date = date(2024, 1, 1)
+    end_date: date = date(2024, 1, 22)
 
     proposals: list[Proposal] = Proposal.read_proposals_from_csv("./proposals/csv/ObsList.csv")
     print(f"Number of proposals: {len(proposals)}")
-        # random.shuffle(proposals)
-    # filtered_proposals: list[Proposal] = filter_proposals_by_date(proposals, start_date, end_date)
-
-    # #breakpoint()
+    random.shuffle(proposals)
+    filtered_proposals: list[Proposal] = Proposal.filter_proposals_by_date(proposals, start_date, end_date)
+    print(f"Number of proposals (Filtered): {len(proposals)}")
+    # breakpoint()
 
     # # Generate the timetable using the genetic algorithm
     # genetic_algorithm: Genetic_Algorithm = Genetic_Algorithm(start_date=start_date, end_date=end_date, proposals=filtered_proposals, num_of_timetables=10, num_of_generations=500)
