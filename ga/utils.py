@@ -99,80 +99,78 @@ def read_proposals_from_csv(file_path: str) -> list[Proposal]:
 
     return proposals
 
-def filter_proposals_by_date(proposals: list[Proposal], start_date: date, end_date: date) -> list[Proposal]:
+def filter_scheduled_proposals(proposals: list[Proposal], start_date: date, end_date: date) -> list[Proposal]:
     """
-    Filter proposals based on the given date range.
-    
-    Parameters:
-    proposals (list[Proposal]): List of proposals to filter.
-    start_date (date): Start date of the range.
-    end_date (date): End date of the range.
-    
+    Filter proposals that can be scheduled within the specified date range.
+
+    Args:
+        proposals (list[Proposal]): A list of proposals to filter.
+        start_date (date): The start date of the scheduling range.
+        end_date (date): The end date of the scheduling range.
+
     Returns:
-    list[Proposal]: Filtered list of proposals.
+        list[Proposal]: A list of proposals that can be scheduled within the given date range.
     """
-    filtered_proposals: list[Proposal] = list()
+    filtered_proposals: list[Proposal] = []
 
     total_timetable_duration: int = (end_date - start_date).total_seconds()
-    cumulative_timetable_duration: int = 0
+    cumulative_duration: int = 0
 
     # Iterate through each proposal and check if it can be scheduled
     for proposal in proposals:
-
-        if not can_be_scheduled_proposal(proposal, start_date, end_date):  # Check if the proposal can be scheduled
+        if not proposal.can_be_scheduled(start_date, end_date):
             continue
         
-        cumulative_timetable_duration += proposal.simulated_duration
-        if cumulative_timetable_duration > total_timetable_duration * 0.85:
+        cumulative_duration += proposal.simulated_duration
+        if cumulative_duration > total_timetable_duration:
             break
         
-        filtered_proposals.append(proposal) # Add the proposal if it can be scheduled
+        filtered_proposals.append(proposal)  # Add the proposal if it can be scheduled
+    
     return filtered_proposals
 
-def can_be_scheduled_proposal(proposal: Proposal, start_date: date, end_date: date) -> bool:
-    """Check if a proposal can be scheduled based with the start and end dates."""
-    for day in range((end_date - start_date).days + 1):  # Include the last day
-        # Get the night window for the current day
-        night_start_datetime, night_end_datetime = get_night_window(start_date + timedelta(days=day))
-        sunrise_datetime, sunset_datetime = get_sunrise_sunset(start_date + timedelta(days=day))
 
-        # Prepare the start times
-        min_start_datetime = lst_to_utc(start_date + timedelta(days=day), proposal.lst_start_time)
-        max_start_datetime = lst_to_utc(start_date + timedelta(days=day), proposal.lst_start_end_time)
 
-        # Check both start times for night observations
-        for start_datetime in [min_start_datetime, max_start_datetime]:
-            # Check if scheduling within the night window is possible
-            if proposal.night_obs:
-                if not (start_datetime >= night_start_datetime and 
-                        start_datetime + timedelta(seconds=proposal.simulated_duration) <= night_end_datetime):
-                    return False  # Constraint not met
+def get_proposal_by_id(proposals: list[Proposal], proposal_id: int) -> Proposal | None:
+    """
+    Retrieve a proposal from the list by its unique identifier.
 
-            # Check for sunrise/sunset avoidance
-            if proposal.avoid_sunrise_sunset:
-                if not (start_datetime + timedelta(seconds=proposal.simulated_duration) <= sunrise_datetime or 
-                        start_datetime >= sunset_datetime):
-                    return False  # Constraint not met
+    Args:
+        proposals (list[Proposal]): A list of proposals to search through.
+        proposal_id (int): The unique identifier of the proposal to retrieve.
 
-    return True  # All constraints met
-
-def get_proposal_by_id(proposals: list[Proposal], proposal_id: int) -> Proposal:
-    return next((p for p in proposals if p.id == proposal_id), None)
+    Returns:
+        Proposal | None: The proposal with the specified ID if found, otherwise None.
+    """
+    return next((proposal for proposal in proposals if proposal.id == proposal_id), None)
 
 
 def lst_to_utc(date: date, lst_time: time) -> datetime:
+    """
+    Convert Local Sidereal Time (LST) to Coordinated Universal Time (UTC).
+
+    Args:
+        date (date): The date for which the LST is provided.
+        lst_time (time): The Local Sidereal Time to be converted.
+
+    Returns:
+        datetime: The corresponding UTC datetime for the given LST.
+    """
+    # TODO: Implement conversion from LST to UTC using an appropriate library.
     return datetime.combine(date, lst_time)
 
 def get_night_window(date: date) -> tuple[datetime, datetime]:
     """
-    Return night datetime window for that day in Cape Town.
-    
-    Parameters:
-    date (date): The date for which to calculate the night window.
-    
+    Return the night datetime window for a given day in Cape Town.
+
+    Args:
+        date (date): The date for which to calculate the night window.
+
     Returns:
-    tuple[datetime, datetime]: Start and end datetime of the night window.
+        tuple[datetime, datetime]: A tuple containing the start and end datetime of the night window.
     """
+    # TODO: Consider comuting the night window times using an appropriate library.
+
     # Start of the night at 18:00 (6 PM)
     start_datetime = datetime(date.year, date.month, date.day, 18, 0, 0)
     
@@ -183,17 +181,20 @@ def get_night_window(date: date) -> tuple[datetime, datetime]:
 
 def get_sunrise_sunset(date: date) -> tuple[datetime, datetime]:
     """
-    Return sunrise and sunset datetime for that day in Cape Town.
-    
-    Parameters:
-    date (date): The date for which to calculate sunrise and sunset.
-    
+    Return sunrise and sunset datetime for a given day in Cape Town.
+
+    Args:
+        date (date): The date for which to calculate sunrise and sunset.
+
     Returns:
-    tuple[datetime, datetime]: Sunrise and sunset datetime objects.
+        tuple[datetime, datetime]: A tuple containing the sunrise and sunset datetime objects.
     """
+    # TODO: Consider computing the sunrise and sunset times using an appropriate library for accuracy.
+
     # Set average sunrise and sunset times
     sunrise_datetime = datetime(date.year, date.month, date.day, 6, 0, 0)  # 6:00 AM
     sunset_datetime = datetime(date.year, date.month, date.day, 18, 0, 0)  # 6:00 PM
+    
     return sunrise_datetime, sunset_datetime
 
 def parse_time(time_str: str) -> time:
