@@ -23,60 +23,60 @@ def read_from_csv(file_path: str) -> list[Proposal]:
         with open(file_path, 'r') as file:
             reader = csv.DictReader(file)
             for id, row in enumerate(reader):
-                prefered_dates_start = []
-                prefered_dates_end = []
-                avoid_dates_start = []
-                avoid_dates_end = []
+                prefered_dates_start_date = []
+                prefered_dates_end_date = []
+                avoid_dates_start_date = []
+                avoid_dates_end_date = []
 
                 # Read preferred dates
                 i = 1
-                while f'prefered_dates_start_{i}' in row:
-                    prefered_dates_start.append(date.fromisoformat(row[f'prefered_dates_start_{i}']))
+                while f'prefered_dates_start_date{i}' in row:
+                    prefered_dates_start_date.append(date.fromisoformat(row[f'prefered_dates_start_date{i}']))
                     i += 1
 
                 i = 1
-                while f'prefered_dates_end_{i}' in row:
-                    prefered_dates_end.append(date.fromisoformat(row[f'prefered_dates_end_{i}']))
+                while f'prefered_dates_end_date{i}' in row:
+                    prefered_dates_end_date.append(date.fromisoformat(row[f'prefered_dates_end_date{i}']))
                     i += 1
 
                 # Read avoided dates
                 i = 1
-                while f'avoid_dates_start_{i}' in row:
-                    avoid_dates_start.append(date.fromisoformat(row[f'avoid_dates_start_{i}']))
+                while f'avoid_dates_start_date{i}' in row:
+                    avoid_dates_start_date.append(date.fromisoformat(row[f'avoid_dates_start_date{i}']))
                     i += 1
 
                 i = 1
-                while f'avoid_dates_end_{i}' in row:
-                    avoid_dates_end.append(date.fromisoformat(row[f'avoid_dates_end_{i}']))
+                while f'avoid_dates_end_date{i}' in row:
+                    avoid_dates_end_date.append(date.fromisoformat(row[f'avoid_dates_end_date{i}']))
                     i += 1
 
                 # Validate required fields
                 if row['minimum_antennas'] == '' or int(row['minimum_antennas']) <= 0:
                     continue  # Invalid data with missing or non-positive 'minimum_antennas'
 
-                if int(row['simulated_duration']) < 1800:  # 60 * 30
-                    continue  # Invalid data with simulated duration less than 30 minutes
+                if int(row['simulated_duration']) <= 0:
+                    continue  # Invalid data with simulated duration less than or equal to 0 sec
 
                 proposals.append(Proposal(
                     int(row['id']),
-                    row['description'],  # Assuming description is added in the Proposal class
+                    row['description'],
                     row['proposal_id'],
                     row['owner_email'],
                     row['instrument_product'],
                     float(row['instrument_integration_time']),
                     row['instrument_band'],
                     row['instrument_pool_resources'],
-                    Proposal.parse_time(row['lst_start']),
-                    Proposal.parse_time(row['lst_start_end']),
+                    parse_time(row['lst_start']),
+                    parse_time(row['lst_start_end']),
                     int(row['simulated_duration']),
                     True if str(row['night_obs']).lower() == "yes" else False,
                     True if str(row['avoid_sunrise_sunset']).lower() == "yes" else False,
                     int(row['minimum_antennas']),
-                    row.get('general_comments', ''),  # Assuming general_comments is added in the Proposal class
-                    prefered_dates_start,
-                    prefered_dates_end,
-                    avoid_dates_start,
-                    avoid_dates_end,
+                    row.get('general_comments', ''),
+                    prefered_dates_start_date,
+                    prefered_dates_end_date,
+                    avoid_dates_start_date,
+                    avoid_dates_end_date,
                     get_score(str(row['proposal_id']))  # Assuming get_score is defined elsewhere
                 ))
 
