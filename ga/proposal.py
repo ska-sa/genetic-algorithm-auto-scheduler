@@ -245,3 +245,92 @@ class Proposal():
     
      
     
+    def all_constraints_met(self, proposed_start_datetime: datetime) -> bool:
+        """
+        Check if the given proposed_start_datetime satisfies all constraints for this proposal.
+
+        Args:
+            proposed_start_datetime (datetime): The proposed start datetime for this proposal.
+
+        Returns:
+            bool: True if all constraints are met, False otherwise.
+        """
+        # Check each constraint and store the results
+        is_time_constraint_met = self.lst_start_end_time_constraint_met(proposed_start_datetime)
+        is_night_obs_constraint_met = self.night_obs_constraint_met(proposed_start_datetime)
+        is_avoid_sunrise_sunset_constraint_met = self.avoid_sunrise_sunset_contraint_met(proposed_start_datetime)
+
+        # Return True only if all constraints are satisfied
+        return (is_time_constraint_met and
+                is_night_obs_constraint_met and
+                is_avoid_sunrise_sunset_constraint_met)
+
+    def lst_start_end_time_constraint_met(self, proposed_start_datetime: datetime) -> bool:
+        """
+        Check if the proposed start time is within the allowed Local Sidereal Time (LST) start and end times.
+
+        Args:
+            proposed_start_datetime (datetime): The proposed start datetime for this proposal.
+
+        Returns:
+            bool: True if the proposed start time is within the allowed LST range, False otherwise.
+        """
+        # Convert LST start and end times to UTC for the proposed date
+        lst_start_time_utc = lst_to_utc(proposed_start_datetime.date(), self.lst_start_time)
+        lst_end_time_utc = lst_to_utc(proposed_start_datetime.date(), self.lst_start_end_time)
+        
+        # Check if the proposed start datetime is within the allowed LST range
+        is_within_lst_range = lst_start_time_utc <= proposed_start_datetime <= lst_end_time_utc
+        
+        return is_within_lst_range
+
+    def night_obs_constraint_met(self, proposed_start_datetime: datetime) -> bool:
+        """
+        Check if the proposed start datetime meets the night observation constraints.
+
+        Args:
+            proposed_start_datetime (datetime): The proposed start datetime for this proposal.
+
+        Returns:
+            bool: True if the night observation constraints are met, False otherwise.
+        """
+        if self.night_obs:
+            # Compute the proposed end datetime based on the simulated duration
+            proposed_end_datetime = proposed_start_datetime + timedelta(seconds=self.simulated_duration)
+            
+            # Get the night window for the proposed date
+            night_start_datetime, night_end_datetime = get_night_window(proposed_start_datetime.date())
+
+            # Check if both the start and end datetimes fall within the night window
+            is_start_within_night = night_start_datetime <= proposed_start_datetime <= night_end_datetime
+            is_end_within_night = night_start_datetime <= proposed_end_datetime <= night_end_datetime
+            
+            return is_start_within_night and is_end_within_night
+
+        return True  # If night observations are not required, the constraint is considered met
+
+    def avoid_sunriset_sunset_constraint_met(self, proposed_start_datetime: datetime) -> bool:
+        """
+        Check if the proposed datetime avoids sunrise and sunset constraints.
+
+        Args:
+            proposed_start_datetime (datetime): The proposed start datetime for this proposal.
+
+        Returns:
+            bool: True if the sunrise and sunset constraints are met, False otherwise.
+        """
+        if self.avoid_sunrise_sunset:
+            # Get sunrise and sunset datetimes for the proposed date
+            sunrise_datetime, sunset_datetime = get_sunrise_sunset(date=proposed_start_datetime.date())
+
+            # Compute the end datetime based on the proposal's duration
+            proposed_end_datetime = proposed_start_datetime + timedelta(minutes=self.simulated_duration)
+
+            # Check if sunrise or sunset occurs within the proposed start and end datetimes
+            is_sunrise_within_proposal = proposed_start_datetime <= sunrise_datetime <= proposed_end_datetime
+            is_sunset_within_proposal = proposed_start_datetime <= sunset_datetime <= proposed_end_datetime
+            
+            # Return True if neither sunrise nor sunset occurs within the proposal's duration
+            return not (is_sunrise_within_proposal or is_sunset_within_proposal)
+
+        return True
