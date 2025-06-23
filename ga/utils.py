@@ -6,6 +6,18 @@ from datetime import datetime, date, time, timedelta
 from .proposal import Proposal
 import copy
 
+def compute_score(self, proposal_id: str) -> float:
+    """
+    Calculates the score for the given proposal based on its proposal_id.
+
+    Args:
+        proposal_id (str): The unique identifier of the proposal.
+
+    Returns:
+        float: The calculated score for the proposal.
+    """
+    # TODO: Implement the logic for calculating the proposal score
+    return float(random.randint(1, 4))
 
 def read_from_csv(file_path: str) -> list[Proposal]:
     """
@@ -77,7 +89,7 @@ def read_from_csv(file_path: str) -> list[Proposal]:
                     prefered_dates_end_date,
                     avoid_dates_start_date,
                     avoid_dates_end_date,
-                    get_score(str(row['proposal_id']))  # Assuming get_score is defined elsewhere
+                    compute_score(str(row['proposal_id']))  # Assuming get_score is defined elsewhere
                 ))
 
     except FileNotFoundError:
@@ -201,10 +213,6 @@ def avoid_sunrise_sunset_contraint_met(proposal: Proposal, start_datetime: datet
             return True  # Constraint met (neither occurs during the proposal)
         return False  # Constraint not met (one of them occurs during the proposal)
     return True  # If avoiding sunrise/sunset is not required, constraint is met
-
-
-def get_score(proposal_id: str):
-    return random.randint(1, 4) # In future we have to classify proposals to get their actual rates
 
 
 def get_proposal_by_id(proposals: list[Proposal], proposal_id: int) -> Proposal:
