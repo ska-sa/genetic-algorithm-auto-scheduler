@@ -3,7 +3,7 @@ import csv
 import matplotlib.pyplot as plt
 import numpy as np
 from datetime import datetime, date, time, timedelta
-from .proposal import Proposal
+from ga.proposal import Proposal
 import copy
 
 
@@ -44,9 +44,3 @@ def get_sunrise_sunset(date: date) -> tuple[datetime, datetime]:
     return sunrise_datetime, sunset_datetime
 
 
-def parse_time(time_str: str) -> time:
-        """
-        Parse a time string in the format "HH:MM" and return a datetime.time object.
-        """
-        hour, minute = map(int, time_str.split(":"))
-        return time(hour, minute)

@@ -1,13 +1,14 @@
 import random
 from datetime import date
-from .proposal import Proposal
+from ga.proposal import Proposal
 # from .timetable import Timetable
 # from .genetic_algorithim import Genetic_Algorithm
 # from .utils import read_proposals_from_csv, filter_proposals_by_date
 
 def main():
-    start_date: date = date(2024, 1, 1)
-    end_date: date = date(2024, 1, 22)
+    # start_date: date = date(2024, 1, 1)
+    # end_date: date = date(2024, 1, 22)
+
     proposals: list[Proposal] = Proposal.read_proposals_from_csv("./proposals/csv/ObsList.csv")
     print(f"Number of proposals: {len(proposals)}")
         # random.shuffle(proposals)

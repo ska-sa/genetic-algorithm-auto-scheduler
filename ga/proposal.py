@@ -1,7 +1,7 @@
 from datetime import datetime, date, time, timedelta
 import csv
 import random
-# from .utils import lst_to_utc, get_night_window, get_sunrise_sunset
+# from ga.utils import lst_to_utc, get_night_window, get_sunrise_sunset
 
 class Proposal():
     """ A class representing proposals to be scheduled.
@@ -14,6 +14,7 @@ class Proposal():
                  lst_start_time: time = time(0, 0), lst_start_end_time: time = time(23, 59),
                  simulated_duration: int = 60 * 60, score: int = 1,
                  scheduled_start_datetime: datetime | None = None):
+        
         """ Initializing the Proposal object with its attributes
         
         Each proposal has attribibues that are used to determine when and how it can be scheduled. There are constraints that 
@@ -50,11 +51,11 @@ class Proposal():
         self.night_obs: bool = night_obs
         self.avoid_sunrise_sunset: bool = avoid_sunrise_sunset
         self.minimum_antennas: int = minimum_antennas
-        # self.lst_start_time: time = lst_start_time
-        # self.lst_start_end_time: time = lst_start_end_time
-        # self.simulated_duration: int = simulated_duration
-        # self.score: int = score
-        # self.scheduled_start_datetime: datetime | None = scheduled_start_datetime
+        self.lst_start_time: time = lst_start_time
+        self.lst_start_end_time: time = lst_start_end_time
+        self.simulated_duration: int = simulated_duration
+        self.score: int = score
+        self.scheduled_start_datetime: datetime | None = scheduled_start_datetime
 
     # def lst_start_end_time_constraint_met(self, start_datetime: datetime) -> bool:
     
@@ -142,7 +143,18 @@ class Proposal():
     #                     return False  # Constraint not met
 
     #     return True  # All constraints met
-    
+    @staticmethod
+    def parse_time(time_str: str) -> time:
+        """
+        Parse a time string in the format "HH:MM" and return a datetime.time object.
+        """
+        hour, minute = map(int, time_str.split(":"))
+        return time(hour, minute)
+
+    @staticmethod
+    def get_score(prop_id: int) -> int:
+
+        return random.randint(1, 4) # In future we have to classify proposals to get their actual rates
     # def get_proposal_by_id(self, proposal_id: int):
     #    return next((p for p in self.proposals if p.id == proposal_id), None)
 
@@ -194,11 +206,11 @@ class Proposal():
                     avoid_dates_end = avoid_dates_end,
                     night_obs = True if str(row['night_obs']).lower() == "yes" else False,
                     avoid_sunrise_sunset = True if str(row['avoid_sunrise_sunset']).lower == "yes" else False,
-                    minimum_antennas = int(row['minimum_antennas'])
-                    # Proposal.parse_time(row['lst_start']),
-                    # Proposal.parse_time(row['lst_start_end']),
-                    # int(row['simulated_duration']),
-                    # self.get_score(str(row['proposal_id']))
+                    minimum_antennas = int(row['minimum_antennas']),
+                    lst_start_time = Proposal.parse_time(row['lst_start']),
+                    lst_start_end_time = Proposal.parse_time(row['lst_start_end']),
+                    simulated_duration = int(row['simulated_duration']),
+                    score = Proposal.get_score(str(row['proposal_id']))
                 ))    
         return proposals
     
@@ -230,9 +242,6 @@ class Proposal():
             
     #         filtered_proposals.append(proposal) # Add the proposal if it can be scheduled
     #     return filtered_proposals
-
-    # def get_score(self) -> int:
-
-    #     return random.randint(1, 4) # In future we have to classify proposals to get their actual rates
+    
      
     
