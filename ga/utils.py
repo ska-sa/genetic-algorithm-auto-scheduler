@@ -19,7 +19,7 @@ def compute_score(self, proposal_id: str) -> float:
     # TODO: Implement the logic for calculating the proposal score
     return float(random.randint(1, 4))
 
-def read_from_csv(file_path: str) -> list[Proposal]:
+def read_proposals_from_csv(file_path: str) -> list[Proposal]:
     """
     Reads a CSV file containing proposals and returns a list of Proposal objects.
 
@@ -155,65 +155,6 @@ def can_be_scheduled_proposal(proposal: Proposal, start_date: date, end_date: da
                     return False  # Constraint not met
 
     return True  # All constraints met
-
-
-def all_constraints_met(proposal: Proposal, start_datetime: datetime) -> bool:
-    """
-    Check if all constraints for the proposal are met.
-    
-    Parameters:
-    proposal (Proposal): The proposal to check.
-    start_datetime (datetime): The proposed start datetime.
-    
-    Returns:
-    bool: True if all constraints are met, False otherwise.
-    """
-    return (lst_start_end_time_constraint_met(proposal, start_datetime) and
-            night_obs_constraint_met(proposal, start_datetime) and
-            avoid_sunrise_sunset_contraint_met(proposal, start_datetime))
-
-def lst_start_end_time_constraint_met(proposal: Proposal, start_datetime: datetime) -> bool:
-    """
-    Check if the proposal's start time is within the allowed LST start and end time.
-    
-    Parameters:
-    proposal (Proposal): The proposal to check.
-    start_datetime (datetime): The proposed start datetime.
-    
-    Returns:
-    bool: True if the constraint is met, False otherwise.
-    """
-    lst_start_time = lst_to_utc(start_datetime.date(), proposal.lst_start_time) 
-    lst_start_end_time = lst_to_utc(start_datetime.date(), proposal.lst_start_end_time)
-    return lst_start_time <= start_datetime and start_datetime <= lst_start_end_time
-
-def night_obs_constraint_met(proposal: Proposal, start_datetime: datetime) -> bool:
-    if proposal.night_obs:
-        # Compute end datetime based on simulated duration
-        end_datetime = start_datetime + timedelta(seconds=proposal.simulated_duration)
-        night_start_datetime, night_end_datetime = get_night_window(start_datetime.date())
-
-        # Check if both start and end datetimes fall within the night window
-        if night_start_datetime <= start_datetime <= night_end_datetime and \
-        night_start_datetime <= end_datetime <= night_end_datetime:
-            return True  # Constraint met
-        return False  # Constraint not met
-    return True  # If night observations are not required, constraint is met
-
-def avoid_sunrise_sunset_contraint_met(proposal: Proposal, start_datetime: datetime) -> bool:
-    if proposal.avoid_sunrise_sunset:
-        # Get sunrise and sunset datetimes
-        sunrise_datetime, sunset_datetime = get_sunrise_sunset(date=start_datetime.date())
-
-        # Compute end datetime based on the proposal's duration
-        end_datetime = start_datetime + timedelta(minutes=proposal.simulated_duration)
-
-        # Check if sunrise or sunset occurs within the proposal's duration
-        if (sunrise_datetime >= end_datetime) or (sunset_datetime <= start_datetime):
-            return True  # Constraint met (neither occurs during the proposal)
-        return False  # Constraint not met (one of them occurs during the proposal)
-    return True  # If avoiding sunrise/sunset is not required, constraint is met
-
 
 def get_proposal_by_id(proposals: list[Proposal], proposal_id: int) -> Proposal:
     return next((p for p in proposals if p.id == proposal_id), None)
