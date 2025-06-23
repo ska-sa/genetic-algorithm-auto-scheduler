@@ -55,16 +55,3 @@ class Proposal():
         self.avoid_dates_end_date: list[date] = avoid_dates_end_date
         self.score: float = score
         self.scheduled_start_datetime: datetime | None = scheduled_start_datetime
-
-    def compute_score(self, proposal_id: str) -> float:
-        """
-        Calculates the score for the given proposal based on its proposal_id.
-
-        Args:
-            proposal_id (str): The unique identifier of the proposal.
-
-        Returns:
-            float: The calculated score for the proposal.
-        """
-        # TODO: Implement the logic for calculating the proposal score
-        return 1.0
