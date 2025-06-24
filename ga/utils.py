@@ -5,6 +5,19 @@ import numpy as np
 from datetime import datetime, date, time, timedelta
 import copy
 
+def compute_score(proposal_id: str) -> float:
+    """
+    Calculates the score for the given proposal based on its proposal_id.
+
+    Args:
+        proposal_id (str): The unique identifier of the proposal.
+
+    Returns:
+        float: The calculated score for the proposal.
+    """
+    # TODO: Implement the logic for calculating the proposal score
+    return float(random.randint(1, 4))
+
 
 def lst_to_utc(date: date, lst_time: time) -> datetime:
     return datetime.combine(date, lst_time)
@@ -50,7 +63,3 @@ def parse_time(time_str: str) -> time:
     hour, minute = map(int, time_str.split(":"))
     return time(hour, minute)
 
-
-def get_score(prop_id: int) -> int:
-
-    return random.randint(1, 4) # In future we have to classify proposals to get their actual rates
