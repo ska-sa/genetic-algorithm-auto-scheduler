@@ -1,19 +1,13 @@
 from datetime import datetime, date, time, timedelta
 import csv
 import random
-from ga.utils import lst_to_utc, get_night_window, get_sunrise_sunset, parse_time, get_score
+from ga.utils import lst_to_utc, get_night_window, get_sunrise_sunset, parse_time, compute_score
 
 class Proposal():
     """ A class representing proposals to be scheduled.
     """
     
-    def __init__(self, id: int, owner_email: str, build_time: int,
-                 prefered_dates_start: list[date], prefered_dates_end: list[date],
-                 avoid_dates_start: list[date], avoid_dates_end: list[date],
-                 night_obs: bool, avoid_sunrise_sunset: bool, minimum_antennas: int,
-                 lst_start_time: time = time(0, 0), lst_start_end_time: time = time(23, 59),
-                 simulated_duration: int = 60 * 60, score: int = 1,
-                 scheduled_start_datetime: datetime | None = None):
+    def __init__(self, id: int, description: str, proposal_id: str, owner_email: str, instrument_product: str, instrument_integration_time: float, instrument_band: str, instrument_pool_resources: str, lst_start_time: time, lst_start_end_time: time, simulated_duration: int, night_obs: bool, avoid_sunrise_sunset: bool, minimum_antennas: int, general_comments: str, prefered_dates_start_date: list[date], prefered_dates_end_date: list[date], avoid_dates_start_date: list[date], avoid_dates_end_date: list[date], score: float, scheduled_start_datetime: datetime | None = None) -> None:
         
         """ Initializing the Proposal object with its attributes
         
@@ -22,39 +16,51 @@ class Proposal():
 
         Args:
         id (str): Identifier of the proposal
+        description (str): A brief description of the proposal.
+        proposal_id (str): The unique identifier for the proposal instance.
         owner_email (str): The email address of the proposal owner
-        build_time (int):  The time it tasks to build a subarray in preparation for a proposal.
+        instrument_product (str): The instrument product used for the observation.
+        instrument_integration_time (float): The integration time for the instrument.
+        instrument_band (str): The frequency band of the instrument.
+        instrument_pool_resources (str): The resources allocated for the instrument.
+        lst_start_time (time):  The earliest start time of an observation in lst ( Local sidereal time).
+        lst_start_end_time (time): The latest start time of an observation in lst ( Local sidereal time).
+        simulated_duration (int): The simulated suration of the proposals in seconds.
+        night_obs (bool):  The proposal can only be scheduled at night.
+        avoid_sunrise_sunset (bool): The proposal should avoid sunrise and sunset times.
+        minimum_antennas (int): The minimum required antennas to run the proposal.
+        general_comments (str): Any general comments regarding the proposal.
         prefered_dates_start (list[date]): The date that owner prefers the proposal to start by.
         prefered_dates_end (list[date]): The date that owner prefers the proposal to end by.
         avoid_dates_start (list[date]): The start date that owner prefers the proposal to avoid
         avoid_dates_end (list[date]): The end date that owner prefers the proposal to avoid
-        night_obs (bool):  The proposal can only be scheduled at night.
-        avoid_sunrise_sunset (bool): The proposal should avoid sunrise and sunset times.
-        minimum_antennas (int): The minimum required antennas to run the proposal.
-        lst_start_time (time):  The earliest start time of an observation in lst ( Local sidereal time).
-        lst_start_end_time (time): The latest start time of an observation in lst ( Local sidereal time).
-        simulated_duration (int): The simulated suration of the proposals in seconds.
         score (int): The calculated score to penalize the observation for not adhearing to constraints.
         scheduled_start_datetime (datetime)| None: The actual scheduled start datetime for a proposal.
 
         Returns:
-            list[proposal]: A list of proposals with their attributes set.
+            None.
 
         """
         self.id: int = id
+        self.description: str = description
+        self.proposal_id: str = proposal_id
         self.owner_email: str = owner_email
-        self.build_time: int = build_time
-        self.prefered_dates_start: list[date] = prefered_dates_start
-        self.prefered_dates_end: list[date] = prefered_dates_end
-        self.avoid_dates_start: list[date] = avoid_dates_start
-        self.avoid_dates_end: list[date] = avoid_dates_end
-        self.night_obs: bool = night_obs
-        self.avoid_sunrise_sunset: bool = avoid_sunrise_sunset
-        self.minimum_antennas: int = minimum_antennas
+        self.instrument_product: str = instrument_product
+        self.instrument_integration_time: float = instrument_integration_time
+        self.instrument_band: str = instrument_band
+        self.instrument_pool_resources: str = instrument_pool_resources
         self.lst_start_time: time = lst_start_time
         self.lst_start_end_time: time = lst_start_end_time
         self.simulated_duration: int = simulated_duration
-        self.score: int = score
+        self.night_obs: bool = night_obs
+        self.avoid_sunrise_sunset: bool = avoid_sunrise_sunset
+        self.minimum_antennas: int = minimum_antennas
+        self.general_comments: str = general_comments
+        self.prefered_dates_start_date: list[date] = prefered_dates_start_date
+        self.prefered_dates_end_date: list[date] = prefered_dates_end_date
+        self.avoid_dates_start_date: list[date] = avoid_dates_start_date
+        self.avoid_dates_end_date: list[date] = avoid_dates_end_date
+        self.score: float = score
         self.scheduled_start_datetime: datetime | None = scheduled_start_datetime
 
    #----> Methods to check constraints <----#
@@ -103,7 +109,7 @@ class Proposal():
 
         return True  # If night observations are not required, the constraint is considered met
 
-    def avoid_sunriset_sunset_constraint_met(self, proposed_start_datetime: datetime) -> bool:
+    def avoid_sunrise_sunset_constraint_met(self, proposed_start_datetime: datetime) -> bool:
         """
         Check if the proposed datetime avoids sunrise and sunset constraints.
 
@@ -142,8 +148,7 @@ class Proposal():
         # Check each constraint and store the results
         is_time_constraint_met = self.lst_start_end_time_constraint_met(proposed_start_datetime)
         is_night_obs_constraint_met = self.night_obs_constraint_met(proposed_start_datetime)
-        is_avoid_sunrise_sunset_constraint_met = self.avoid_sunrise_sunset_contraint_met(proposed_start_datetime)
-
+        is_avoid_sunrise_sunset_constraint_met = self.avoid_sunrise_sunset_constraint_met(proposed_start_datetime)
         # Return True only if all constraints are satisfied
         return (is_time_constraint_met and
                 is_night_obs_constraint_met and
@@ -182,58 +187,83 @@ class Proposal():
     
     @staticmethod
     def read_proposals_from_csv(file_path: str) -> list["Proposal"]:
+        """
+        Reads a CSV file containing proposals and returns a list of Proposal objects.
 
+        Args:
+            file_path (str): The path to the CSV file containing proposal data.
+
+        Returns:
+            list[Proposal]: A list of Proposal objects created from the CSV data.
+        """
         proposals = []
-        with open(file_path, 'r') as file:
-            reader = csv.DictReader(file)
-            for id, row in enumerate(reader):
-                prefered_dates_start = []
-                prefered_dates_end = []
-                avoid_dates_start = []
-                avoid_dates_end = []
+        from .proposal import Proposal
+        try:
+            with open(file_path, 'r') as file:
+                reader = csv.DictReader(file)
+                for id, row in enumerate(reader):
+                    prefered_dates_start_date = []
+                    prefered_dates_end_date = []
+                    avoid_dates_start_date = []
+                    avoid_dates_end_date = []
 
-                # Read preferred dates
-                i = 1
-                while f'prefered_dates_start_{i}' in row:
-                    prefered_dates_start.append(date.fromisoformat(row[f'prefered_dates_start_{i}']))
-                    i += 1
+                    # Read preferred dates
+                    i = 1
+                    while f'prefered_dates_start_date{i}' in row:
+                        prefered_dates_start_date.append(date.fromisoformat(row[f'prefered_dates_start_date{i}']))
+                        i += 1
 
-                i = 1
-                while f'prefered_dates_end_{i}' in row:
-                    prefered_dates_end.append(date.fromisoformat(row[f'prefered_dates_end_{i}']))
-                    i += 1
+                    i = 1
+                    while f'prefered_dates_end_date{i}' in row:
+                        prefered_dates_end_date.append(date.fromisoformat(row[f'prefered_dates_end_date{i}']))
+                        i += 1
 
-                # Read avoided dates
-                i = 1
-                while f'avoid_dates_start_{i}' in row:
-                    avoid_dates_start.append(date.fromisoformat(row[f'avoid_dates_start_{i}']))
-                    i += 1
+                    # Read avoided dates
+                    i = 1
+                    while f'avoid_dates_start_date{i}' in row:
+                        avoid_dates_start_date.append(date.fromisoformat(row[f'avoid_dates_start_date{i}']))
+                        i += 1
 
-                i = 1
-                while f'avoid_dates_end_{i}' in row:
-                    avoid_dates_end.append(date.fromisoformat(row[f'avoid_dates_end_{i}']))
-                    i += 1
-                if row['minimum_antennas'] == '':
-                    continue # invalid data with missing key 'minimum_antennas'
+                    i = 1
+                    while f'avoid_dates_end_date{i}' in row:
+                        avoid_dates_end_date.append(date.fromisoformat(row[f'avoid_dates_end_date{i}']))
+                        i += 1
 
-                if int(row['simulated_duration']) < 60 * 30:
-                    continue
-                proposals.append(Proposal(
-                    id = int(row['id']),
-                    owner_email = row['owner_email'],
-                    build_time = 30 * 60,
-                    prefered_dates_start = prefered_dates_start,
-                    prefered_dates_end = prefered_dates_end,
-                    avoid_dates_start = avoid_dates_start,
-                    avoid_dates_end = avoid_dates_end,
-                    night_obs = True if str(row['night_obs']).lower() == "yes" else False,
-                    avoid_sunrise_sunset = True if str(row['avoid_sunrise_sunset']).lower == "yes" else False,
-                    minimum_antennas = int(row['minimum_antennas']),
-                    lst_start_time = parse_time(row['lst_start']),
-                    lst_start_end_time = parse_time(row['lst_start_end']),
-                    simulated_duration = int(row['simulated_duration']),
-                    score = get_score(str(row['proposal_id']))
-                ))    
+                    # Validate required fields
+                    if row['minimum_antennas'] == '' or int(row['minimum_antennas']) <= 0:
+                        continue  # Invalid data with missing or non-positive 'minimum_antennas'
+
+                    if int(row['simulated_duration']) <= 0:
+                        continue  # Invalid data with simulated duration less than or equal to 0 sec
+                    
+                    proposals.append(Proposal(
+                        int(row['id']),
+                        row['description'],
+                        row['proposal_id'],
+                        row['owner_email'],
+                        row['instrument_product'],
+                        float(row['instrument_integration_time']),
+                        row['instrument_band'],
+                        row['instrument_pool_resources'],
+                        parse_time(row['lst_start']),
+                        parse_time(row['lst_start_end']),
+                        int(row['simulated_duration']),
+                        True if str(row['night_obs']).lower() == "yes" else False,
+                        True if str(row['avoid_sunrise_sunset']).lower() == "yes" else False,
+                        int(row['minimum_antennas']),
+                        row.get('general_comments', ''),
+                        prefered_dates_start_date,
+                        prefered_dates_end_date,
+                        avoid_dates_start_date,
+                        avoid_dates_end_date,
+                        compute_score(str(row['proposal_id']))
+                    ))
+
+        except FileNotFoundError:
+            print(f"Error: The file {file_path} was not found.")
+        except Exception as e:
+            print(f"An error occurred: {e}")
+
         return proposals
     
     @staticmethod
