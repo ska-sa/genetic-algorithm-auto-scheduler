@@ -7,3 +7,5 @@ proposals/
 outputs/timetable*
 
 outputs/*2025.png
+
+*.DS_Store
