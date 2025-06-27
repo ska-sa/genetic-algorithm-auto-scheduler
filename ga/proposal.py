@@ -5,8 +5,30 @@ class Proposal():
     """ A class representing proposals to be scheduled.
     """
     
-    def __init__(self, id: int, description: str, proposal_id: str, owner_email: str, instrument_product: str, instrument_integration_time: float, instrument_band: str, instrument_pool_resources: str, lst_start_time: time, lst_start_end_time: time, simulated_duration: int, night_obs: bool, avoid_sunrise_sunset: bool, minimum_antennas: int, general_comments: str, prefered_dates_start_date: list[date], prefered_dates_end_date: list[date], avoid_dates_start_date: list[date], avoid_dates_end_date: list[date], score: float, scheduled_start_datetime: datetime | None = None) -> None:
-        
+    def __init__(
+        self,
+        id: int,
+        description: str,
+        proposal_id: str,
+        owner_email: str,
+        instrument_product: str,
+        instrument_integration_time: float,
+        instrument_band: str,
+        instrument_pool_resources: str,
+        lst_start_time: time,
+        lst_start_end_time: time,
+        simulated_duration: int,
+        night_obs: bool,
+        avoid_sunrise_sunset: bool,
+        minimum_antennas: int,
+        general_comments: str,
+        prefered_dates_start_date: list[date],
+        prefered_dates_end_date: list[date],
+        avoid_dates_start_date: list[date],
+        avoid_dates_end_date: list[date],
+        score: float,
+        scheduled_start_datetime: datetime | None = None,
+    ) -> None:
         """ Initializing the Proposal object with its attributes
         
         Each proposal has attribibues that are used to determine when and how it can be scheduled. There are constraints that 
