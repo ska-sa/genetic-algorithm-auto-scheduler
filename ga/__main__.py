@@ -3,17 +3,17 @@ from datetime import date
 from ga.proposal import Proposal
 # from .timetable import Timetable
 # from .genetic_algorithim import Genetic_Algorithm
-# from .utils import read_proposals_from_csv, filter_proposals_by_date
+from .utils import read_proposals_from_csv, filter_proposals_by_date
 
 def main():
     start_date: date = date(2024, 1, 1)
     end_date: date = date(2024, 1, 22)
 
-    proposals: list[Proposal] = Proposal.read_proposals_from_csv("./proposals/csv/ObsList.csv")
+    proposals: list[Proposal] = read_proposals_from_csv("./proposals/csv/ObsList.csv")
     print(f"Number of proposals: {len(proposals)}")
     random.shuffle(proposals)
-    filtered_proposals: list[Proposal] = Proposal.filter_proposals_by_date(proposals, start_date, end_date)
-    print(f"Number of proposals (Filtered): {len(proposals)}")
+    filtered_proposals: list[Proposal] = filter_proposals_by_date(proposals, start_date, end_date)
+    print(f"Number of proposals (Filtered): {len(filtered_proposals)}")
     # breakpoint()
 
     # # Generate the timetable using the genetic algorithm
