@@ -1,39 +1,65 @@
 from datetime import datetime, date, time, timedelta
-from .utils import lst_to_utc, get_night_window, get_sunrise_sunset
+from ga.utils import lst_to_utc, get_night_window, get_sunrise_sunset
 
 class Proposal():
-    """Represents a proposal for a telescope observation"""
-    def __init__(self, id: int, description: str, proposal_id: str, owner_email: str, instrument_product: str, instrument_integration_time: float, instrument_band: str, instrument_pool_resources: str, lst_start_time: time, lst_start_end_time: time, simulated_duration: int, night_obs: bool, avoid_sunrise_sunset: bool, minimum_antennas: int, general_comments: str, prefered_dates_start_date: list[date], prefered_dates_end_date: list[date], avoid_dates_start_date: list[date], avoid_dates_end_date: list[date], score: float, scheduled_start_datetime: datetime | None = None) -> None:
-        """
-        Instantiate a Proposal object with the following attributes: 
-        owner's email, observation time and duration, preferred dates, 
-        avoided dates, and various other constraints.
+    """ A class representing proposals to be scheduled.
+    """
+    
+    def __init__(
+        self,
+        id: int,
+        description: str,
+        proposal_id: str,
+        owner_email: str,
+        instrument_product: str,
+        instrument_integration_time: float,
+        instrument_band: str,
+        instrument_pool_resources: str,
+        lst_start_time: time,
+        lst_start_end_time: time,
+        simulated_duration: int,
+        night_obs: bool,
+        avoid_sunrise_sunset: bool,
+        minimum_antennas: int,
+        general_comments: str,
+        prefered_dates_start_date: list[date],
+        prefered_dates_end_date: list[date],
+        avoid_dates_start_date: list[date],
+        avoid_dates_end_date: list[date],
+        score: float,
+        scheduled_start_datetime: datetime | None = None,
+    ) -> None:
+        """ Initializing the Proposal object with its attributes
+        
+        Each proposal has attribibues that are used to determine when and how it can be scheduled. There are constraints that 
+        will be used to filter the peoposals that can be scheduled at a given time.
 
         Args:
-            id (int): The unique identifier for the proposal.
-            description (str): A brief description of the proposal.
-            proposal_id (str): The unique identifier for the proposal instance.
-            owner_email (str): The email address of the proposal owner.
-            instrument_product (str): The instrument product used for the observation.
-            instrument_integration_time (float): The integration time for the instrument.
-            instrument_band (str): The frequency band of the instrument.
-            instrument_pool_resources (str): The resources allocated for the instrument.
-            lst_start_time (time): The start time for the last observation.
-            lst_start_end_time (time): The end time for the last observation.
-            simulated_duration (int): The duration of the simulated observation.
-            night_obs (bool): Indicates if the observation is at night.
-            avoid_sunrise_sunset (bool): Indicates if sunrise and sunset times should be avoided.
-            minimum_antennas (int): The minimum number of antennas required for the observation.
-            general_comments (str): Any general comments regarding the proposal.
-            prefered_dates_start_date (list[date]): List of preferred start dates for the observation.
-            prefered_dates_end_date (list[date]): List of preferred end dates for the observation.
-            avoid_dates_start_date (list[date]): List of dates to avoid starting the observation.
-            avoid_dates_end_date (list[date]): List of dates to avoid ending the observation.
-            score (float): The score assigned to the proposal.
-            scheduled_start_datetime (datetime | None): The scheduled start datetime for the observation.
+        id (str): Identifier of the proposal
+        description (str): A brief description of the proposal.
+        proposal_id (str): The unique identifier for the proposal instance.
+        owner_email (str): The email address of the proposal owner
+        instrument_product (str): The instrument product used for the observation.
+        instrument_integration_time (float): The integration time for the instrument.
+        instrument_band (str): The frequency band of the instrument.
+        instrument_pool_resources (str): The resources allocated for the instrument.
+        lst_start_time (time):  The earliest start time of an observation in lst ( Local sidereal time).
+        lst_start_end_time (time): The latest start time of an observation in lst ( Local sidereal time).
+        simulated_duration (int): The simulated suration of the proposals in seconds.
+        night_obs (bool):  The proposal can only be scheduled at night.
+        avoid_sunrise_sunset (bool): The proposal should avoid sunrise and sunset times.
+        minimum_antennas (int): The minimum required antennas to run the proposal.
+        general_comments (str): Any general comments regarding the proposal.
+        prefered_dates_start (list[date]): The date that owner prefers the proposal to start by.
+        prefered_dates_end (list[date]): The date that owner prefers the proposal to end by.
+        avoid_dates_start (list[date]): The start date that owner prefers the proposal to avoid
+        avoid_dates_end (list[date]): The end date that owner prefers the proposal to avoid
+        score (int): The calculated score to penalize the observation for not adhearing to constraints.
+        scheduled_start_datetime (datetime)| None: The actual scheduled start datetime for a proposal.
 
         Returns:
-            None
+            None.
+
         """
         self.id: int = id
         self.description: str = description
@@ -57,25 +83,7 @@ class Proposal():
         self.score: float = score
         self.scheduled_start_datetime: datetime | None = scheduled_start_datetime
 
-    def all_constraints_met(self, proposed_start_datetime: datetime) -> bool:
-        """
-        Check if the given proposed_start_datetime satisfies all constraints for this proposal.
-
-        Args:
-            proposed_start_datetime (datetime): The proposed start datetime for this proposal.
-
-        Returns:
-            bool: True if all constraints are met, False otherwise.
-        """
-        # Check each constraint and store the results
-        is_time_constraint_met = self.lst_start_end_time_constraint_met(proposed_start_datetime)
-        is_night_obs_constraint_met = self.night_obs_constraint_met(proposed_start_datetime)
-        is_avoid_sunrise_sunset_constraint_met = self.avoid_sunrise_sunset_constraint_met(proposed_start_datetime)
-        
-        # Return True only if all constraints are satisfied
-        return (is_time_constraint_met and
-                is_night_obs_constraint_met and
-                is_avoid_sunrise_sunset_constraint_met)
+   #----> Methods to check constraints <----#
 
     def lst_start_end_time_constraint_met(self, proposed_start_datetime: datetime) -> bool:
         """
@@ -147,28 +155,26 @@ class Proposal():
 
         return True
     
-    def can_be_scheduled(self, start_date: date, end_date: date) -> bool:
+    def all_constraints_met(self, proposed_start_datetime: datetime) -> bool:
         """
-        Check if a proposal can be scheduled based on the specified start and end dates.
+        Check if the given proposed_start_datetime satisfies all constraints for this proposal.
 
         Args:
-            start_date (date): The start date of the scheduling range.
-            end_date (date): The end date of the scheduling range.
+            proposed_start_datetime (datetime): The proposed start datetime for this proposal.
 
         Returns:
-            bool: True if the proposal can be scheduled within the date range, False otherwise.
+            bool: True if all constraints are met, False otherwise.
         """
-        for day in range((end_date - start_date).days + 1):  # Include the last day
-            current_date = start_date + timedelta(days=day)
-
-            # Prepare the possible start times for the current day
-            min_start_time = lst_to_utc(current_date, self.lst_start_time)
-            max_start_time = lst_to_utc(current_date, self.lst_start_end_time)
-
-            # Check if any proposed start time meets all constraints
-            for start_time in [min_start_time, max_start_time]:
-                if self.all_constraints_met(start_time):
-                    return True  # Proposal can be scheduled on this day
-
-        return False
+        # Check each constraint and store the results
+        is_time_constraint_met = self.lst_start_end_time_constraint_met(proposed_start_datetime)
+        is_night_obs_constraint_met = self.night_obs_constraint_met(proposed_start_datetime)
+        is_avoid_sunrise_sunset_constraint_met = self.avoid_sunrise_sunset_constraint_met(proposed_start_datetime)
+        # Return True only if all constraints are satisfied
+        return (is_time_constraint_met and
+                is_night_obs_constraint_met and
+                is_avoid_sunrise_sunset_constraint_met)
     
+    
+     
+    # def get_proposal_by_id(self, proposal_id: int):
+    #   return next((p for p in self.proposals if p.id == proposal_id), None)

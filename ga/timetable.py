@@ -1,8 +1,7 @@
 import random
 from datetime import datetime, timedelta, date, time
-from .proposal import Proposal
-from .individual import Individual
-from .utils import get_night_window, get_sunrise_sunset, get_proposal_by_id
+from ga.proposal import Proposal
+from .utils import get_night_window, get_sunrise_sunset, get_proposal_by_id, all_constraints_met
 from matplotlib import pyplot as plt
 import copy
 

@@ -1,9 +1,6 @@
-from __future__ import annotations
-import random
 import csv
-import numpy as np
+import random
 from datetime import datetime, date, time, timedelta
-import copy
 
 def compute_score(proposal_id: str) -> float:
     """
@@ -18,7 +15,73 @@ def compute_score(proposal_id: str) -> float:
     # TODO: Implement the logic for calculating the proposal score
     return float(random.randint(1, 4))
 
-def read_proposals_from_csv(file_path: str) -> list[Proposal]:
+
+def lst_to_utc(date: date, lst_time: time) -> datetime:
+    return datetime.combine(date, lst_time)
+
+def get_night_window(date: date) -> tuple[datetime, datetime]:
+    """
+    Return night datetime window for that day in Cape Town.
+    
+    Parameters:
+    date (date): The date for which to calculate the night window.
+    
+    Returns:
+    tuple[datetime, datetime]: Start and end datetime of the night window.
+    """
+    # Start of the night at 18:00 (6 PM)
+    start_datetime = datetime(date.year, date.month, date.day, 18, 0, 0)
+    
+    # End of the night at 06:00 (6 AM) the next day
+    end_datetime = start_datetime + timedelta(hours=12)  # 18:00 to 06:00 next day
+
+    return (start_datetime, end_datetime)
+
+def get_sunrise_sunset(date: date) -> tuple[datetime, datetime]:
+    """
+    Return sunrise and sunset datetime for that day in Cape Town.
+    
+    Parameters:
+    date (date): The date for which to calculate sunrise and sunset.
+    
+    Returns:
+    tuple[datetime, datetime]: Sunrise and sunset datetime objects.
+    """
+    # Set average sunrise and sunset times
+    sunrise_datetime = datetime(date.year, date.month, date.day, 6, 0, 0)  # 6:00 AM
+    sunset_datetime = datetime(date.year, date.month, date.day, 18, 0, 0)  # 6:00 PM
+    return sunrise_datetime, sunset_datetime
+
+
+def parse_time(time_str: str) -> time:
+    """
+    Parse a time string in the format "HH:MM" and return a datetime.time object.
+    """
+    hour, minute = map(int, time_str.split(":"))
+    return time(hour, minute)
+
+def can_be_scheduled_proposal(proposal: "Proposal", start_date: date, end_date: date) -> bool:
+    """
+    Checks if a proposal can be scheduled within the given start and end dates.
+
+    Args:
+        proposal (Proposal): The proposal to be checked for scheduling.
+        start_date (date): The start date for the scheduling window.
+        end_date (date): The end date for the scheduling window.
+
+    Returns:
+        bool: True if the proposal can be scheduled within the given dates, False otherwise.
+    """
+    for day in range((end_date - start_date).days + 1):
+        current_date: date = start_date + timedelta(days=day)
+        earliest_start_datetime: datetime = datetime.combine(date=current_date, time=proposal.lst_start_time)
+        latest_start_datetime: datetime = datetime.combine(date=current_date, time=proposal.lst_start_end_time)
+        for current_datetime in [earliest_start_datetime, latest_start_datetime]:
+            if proposal.all_constraints_met(current_datetime):
+                return True
+    return False
+   
+def read_proposals_from_csv(file_path: str) -> list["Proposal"]:
     """
     Reads a CSV file containing proposals and returns a list of Proposal objects.
 
@@ -88,7 +151,7 @@ def read_proposals_from_csv(file_path: str) -> list[Proposal]:
                     prefered_dates_end_date,
                     avoid_dates_start_date,
                     avoid_dates_end_date,
-                    compute_score(str(row['proposal_id']))  # Assuming get_score is defined elsewhere
+                    compute_score(str(row['proposal_id']))
                 ))
 
     except FileNotFoundError:
@@ -97,20 +160,20 @@ def read_proposals_from_csv(file_path: str) -> list[Proposal]:
         print(f"An error occurred: {e}")
 
     return proposals
+    
 
-def filter_scheduled_proposals(proposals: list[Proposal], start_date: date, end_date: date) -> list[Proposal]:
-    """
-    Filter proposals that can be scheduled within the specified date range.
-
+def filter_proposals_by_date(proposals: list["Proposal"],start_date: date, end_date: date) -> list["Proposal"]:
+    """Filter proposals based on the given date range.
+    
     Args:
-        proposals (list[Proposal]): A list of proposals to filter.
-        start_date (date): The start date of the scheduling range.
-        end_date (date): The end date of the scheduling range.
-
+        proposals (list[Proposal]): List of proposals to filter.
+        start_date (date): Start date of the range.
+        end_date (date): End date of the range.
+    
     Returns:
-        list[Proposal]: A list of proposals that can be scheduled within the given date range.
+        list[Proposal]: Filtered list of proposals.
     """
-    filtered_proposals: list[Proposal] = []
+    filtered_proposals: list["Proposal"] = list()
 
     total_timetable_duration: int = (end_date - start_date).total_seconds()
     cumulative_duration: int = 0
@@ -127,168 +190,4 @@ def filter_scheduled_proposals(proposals: list[Proposal], start_date: date, end_
         filtered_proposals.append(proposal)  # Add the proposal if it can be scheduled
     
     return filtered_proposals
-
-
-
-def get_proposal_by_id(proposals: list[Proposal], proposal_id: int) -> Proposal | None:
-    """
-    Retrieve a proposal from the list by its unique identifier.
-
-    Args:
-        proposals (list[Proposal]): A list of proposals to search through.
-        proposal_id (int): The unique identifier of the proposal to retrieve.
-
-    Returns:
-        Proposal | None: The proposal with the specified ID if found, otherwise None.
-    """
-    return next((proposal for proposal in proposals if proposal.id == proposal_id), None)
-
-
-def lst_to_utc(date: date, lst_time: time) -> datetime:
-    """
-    Convert Local Sidereal Time (LST) to Coordinated Universal Time (UTC).
-
-    Args:
-        date (date): The date for which the LST is provided.
-        lst_time (time): The Local Sidereal Time to be converted.
-
-    Returns:
-        datetime: The corresponding UTC datetime for the given LST.
-    """
-    # TODO: Implement conversion from LST to UTC using an appropriate library.
-    return datetime.combine(date, lst_time)
-
-def get_night_window(date: date) -> tuple[datetime, datetime]:
-    """
-    Return the night datetime window for a given day in Cape Town.
-
-    Args:
-        date (date): The date for which to calculate the night window.
-
-    Returns:
-        tuple[datetime, datetime]: A tuple containing the start and end datetime of the night window.
-    """
-    # TODO: Consider comuting the night window times using an appropriate library.
-
-    # Start of the night at 18:00 (6 PM)
-    start_datetime = datetime(date.year, date.month, date.day, 18, 0, 0)
     
-    # End of the night at 06:00 (6 AM) the next day
-    end_datetime = start_datetime + timedelta(hours=12)  # 18:00 to 06:00 next day
-
-    return (start_datetime, end_datetime)
-
-def get_sunrise_sunset(date: date) -> tuple[datetime, datetime]:
-    """
-    Return sunrise and sunset datetime for a given day in Cape Town.
-
-    Args:
-        date (date): The date for which to calculate sunrise and sunset.
-
-    Returns:
-        tuple[datetime, datetime]: A tuple containing the sunrise and sunset datetime objects.
-    """
-    # TODO: Consider computing the sunrise and sunset times using an appropriate library for accuracy.
-
-    # Set average sunrise and sunset times
-    sunrise_datetime = datetime(date.year, date.month, date.day, 6, 0, 0)  # 6:00 AM
-    sunset_datetime = datetime(date.year, date.month, date.day, 18, 0, 0)  # 6:00 PM
-    
-    return sunrise_datetime, sunset_datetime
-
-def parse_time(time_str: str) -> time:
-    """
-    Parse a time string in the format "HH:MM:SS" or "HH:MM" and return a datetime.time object.
-
-    Args:
-        time_str (str): A string representing time in "HH:MM:SS" or "HH:MM" format.
-
-    Returns:
-        datetime.time: A datetime.time object representing the parsed time.
-
-    Raises:
-        ValueError: If the input string is not in the correct format or represents an invalid time.
-    """
-    try:
-        parts = list(map(int, time_str.split(":")))
-        
-        if len(parts) == 2:  # Format "HH:MM"
-            hour, minute = parts
-            second = 0  # Default seconds to 0
-        elif len(parts) == 3:  # Format "HH:MM:SS"
-            hour, minute, second = parts
-        else:
-            raise ValueError("Time must be in 'HH:MM' or 'HH:MM:SS' format.")
-
-        if hour < 0 or hour > 23:
-            raise ValueError("Hour must be between 0 and 23.")
-        if minute < 0 or minute > 59:
-            raise ValueError("Minute must be between 0 and 59.")
-        if second < 0 or second > 59:
-            raise ValueError("Second must be between 0 and 59.")
-
-        return time(hour, minute, second)
-    except ValueError as e:
-        raise ValueError(f"Invalid time format: {time_str}. Error: {e}")
-    
-def random_date(min_date: date, max_date: date) -> date:
-    """
-    Generate a random date between the given minimum and maximum dates.
-
-    Args:
-        min_date (date): The minimum date (inclusive) for the random date.
-        max_date (date): The maximum date (inclusive) for the random date.
-
-    Returns:
-        date: A random date between the given minimum and maximum dates.
-    """
-    delta = max_date - min_date
-    random_days = random.randint(0, delta.days)
-    return min_date + timedelta(days=random_days)
-
-
-def random_time(start_time: time, end_time: time) -> time:
-    """
-    Generate a random time between the given start and end times.
-
-    If the end time is less than the start time, it is assumed to be on the next day.
-
-    Args:
-        start_time (time): The start time (inclusive) for the random time.
-        end_time (time): The end time (inclusive) for the random time.
-
-    Returns:
-        time: A random time between the given start and end times.
-    """
-    # Convert start and end time to total seconds
-    start_seconds = start_time.hour * 3600 + start_time.minute * 60 + start_time.second
-    end_seconds = end_time.hour * 3600 + end_time.minute * 60 + end_time.second
-
-    # If the end time is less than the start time, it means it wraps to the next day
-    if end_seconds < start_seconds:
-        end_seconds += 24 * 60 * 60 
-
-    # Generate a random time in seconds between start and end
-    random_seconds = random.randint(start_seconds, end_seconds)
-
-    # Convert back to hours, minutes, seconds
-    hours, remainder = divmod(random_seconds, 3600)
-    minutes, seconds = divmod(remainder, 60)
-    return time(hour=hours % 24, minute=minutes, second=seconds)  # Ensure hours are within 24
-
-def generate_datetime(proposal: Proposal, start_date: date, end_date: date) -> datetime:
-    for _ in range(10):  # Retry up to 10 times
-        # Randomly generate a date between start_date and end_date
-        randomly_generated_date = random_date(start_date, end_date)
-
-        # Randomly generate a time between lst_start_time and lst_end_time
-        randomly_generated_time = random_time(proposal.lst_start_time, proposal.lst_start_end_time)
-
-        # Combine date and time to get the start datetime
-        start_datetime = datetime.combine(randomly_generated_date, randomly_generated_time)
-
-        # Check if all constraints are met
-        if proposal.all_constraints_met(start_datetime):
-            return start_datetime
-    
-    return None  # Return None if no valid datetime is found after itertations
