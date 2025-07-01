@@ -1,12 +1,14 @@
 import random
 from datetime import datetime, timedelta, date, time
 from .proposal import Proposal
-from .utils import get_night_window, get_sunrise_sunset, get_proposal_by_id, all_constraints_met
+from .individual import Individual
+from .utils import get_night_window, get_sunrise_sunset, get_proposal_by_id
 from matplotlib import pyplot as plt
 import copy
 
-class Timetable:
+class Timetable(Individual):
     def __init__(self, start_date: date, end_date: date, proposals: Proposal, schedules: list[list[int]] = []):
+        super.__init__(start_date, end_date, proposals, schedules)
         self.proposals: Proposal = proposals
         self.start_date: date = start_date
         self.end_date: date = end_date
@@ -15,130 +17,6 @@ class Timetable:
             self.generate()
         else:
             self.schedules = schedules
-
-    def generate_datetime(self, proposal_id: int) -> datetime:
-        proposal: Proposal = get_proposal_by_id(self.proposals, proposal_id)
-        
-        for _ in range(10):  # Retry up to 10 times
-            # Randomly generate a date between start_date and end_date
-            randomly_generated_date = self.random_date(self.start_date, self.end_date)
-            
-            # Skip if the date exceeds end_date
-            if randomly_generated_date > self.end_date:
-                continue
-
-            # Randomly generate a time between lst_start_time and lst_end_time
-            randomly_generated_time = self.random_time(proposal.lst_start_time, proposal.lst_start_end_time)
-
-            # Combine date and time to get the start datetime
-            start_datetime = datetime.combine(randomly_generated_date, randomly_generated_time)
-            end_datetime = start_datetime + timedelta(seconds=proposal.simulated_duration)
-            #if start_datetime.weekday() == 3 or end_datetime.weekday() == 3: # Skip Wednsday
-            #    continue
-            
-            # Check if all constraints are met
-            if all_constraints_met(proposal, start_datetime):
-                return start_datetime
-        
-        return None  # Return None if no valid datetime is found after retries
-
-    def random_date(self, min_date: date, max_date: date) -> date:
-        delta = max_date - min_date
-        random_days = random.randint(0, delta.days)
-        return min_date + timedelta(days=random_days)
-
-    def random_time(self, start_time: time, end_time: time) -> time:
-        # Convert start and end time to total seconds
-        start_seconds = start_time.hour * 3600 + start_time.minute * 60 + start_time.second
-        end_seconds = end_time.hour * 3600 + end_time.minute * 60 + end_time.second
-
-        # If the end time is less than the start time, it means it wraps to the next day
-        if end_seconds < start_seconds:
-            end_seconds += 24 * 60 * 60  # Add 24 hours in seconds to end_time
-
-        # Generate a random time in seconds between start and end
-        random_seconds = random.randint(start_seconds, end_seconds)
-
-        # Convert back to hours, minutes, seconds
-        hours, remainder = divmod(random_seconds, 3600)
-        minutes, seconds = divmod(remainder, 60)
-        return time(hour=hours % 24, minute=minutes, second=seconds)  # Ensure hours are within 24
-
-    def generate(self) -> None:
-        for proposal in self.proposals:
-            start_datetime = self.generate_datetime(proposal.id) if random.random() > 0.75 else None
-            self.schedules.append([proposal.id, start_datetime])  # Append as a list
-        return
-        
-    
-    def compute_score(self) -> float:
-        total_proposal_duration: int = 0
-        total_clash_time: float = 0
-        total_unscheduled_time: int = 0
-        num_scheduled_proposals: int = 0
-
-        for schedule in self.schedules:
-            proposal_id, start_datetime = schedule
-            proposal: Proposal = get_proposal_by_id(self.proposals, proposal_id)
-            total_proposal_duration += proposal.simulated_duration
-            if start_datetime is not None:
-                num_scheduled_proposals += 1
-                for another_proposal_id, another_proposal_start_datetime in self.schedules:
-                    another_proposal: Proposal = get_proposal_by_id(self.proposals, another_proposal_id)
-                    if (proposal_id != another_proposal_id):
-                        if another_proposal_start_datetime is not None:
-                            # Calculate end times for both proposals
-                            proposal_end_datetime = start_datetime + timedelta(seconds=proposal.simulated_duration)
-                            another_proposal_end_datetime = another_proposal_start_datetime + timedelta(seconds=another_proposal.simulated_duration)
-
-                            # Check for clash
-                            # Calculate clash time
-                            max_start = max(start_datetime, another_proposal_start_datetime)
-                            min_end = min(proposal_end_datetime, another_proposal_end_datetime)
-                            
-                            # Calculate clash time in seconds
-                            clash_time = max(0, (min_end - max_start).total_seconds())
-                            total_clash_time += clash_time
-                        else:
-                            total_unscheduled_time += proposal.simulated_duration
-            else:
-                total_unscheduled_time += proposal.simulated_duration
-
-        # If no proposals are scheduled, return a score of 0
-        if num_scheduled_proposals == 0:
-            return 0.0 
-        # Return the score as a fraction of non-clash time to total time
-        return ((total_proposal_duration - total_clash_time) / (total_proposal_duration)) * (0.95 ** (len(self.schedules) - num_scheduled_proposals))
-
-
-            
-    def crossover(self, schedules: list[list[int]]) -> list[list[int]]:
-        offspring_schedules: list[list[int]] = list()
-        for schedule_1, schedule_2 in zip(self.schedules, schedules):
-            offspring_schedules.append(schedule_1 if random.random() > 0.5 else schedule_2)
-        return offspring_schedules
-    
-    def mutation(self, mutation_rate=0.3) -> None:
-        num_of_mutable_schedules: int = int(len(self.schedules) * mutation_rate)
-        mutation_indexes: set[int] = set()  # Use a set for unique mutation indexes
-
-        # Create a deep copy of the schedules to avoid modifying the original
-        original_schedules = copy.deepcopy(self.schedules)
-
-        while len(mutation_indexes) < num_of_mutable_schedules:
-            mutation_index = random.randint(0, len(original_schedules) - 1)
-            
-            if mutation_index not in mutation_indexes:
-                proposal_id = original_schedules[mutation_index][0]  # Get proposal_id
-                start_datetime = self.generate_datetime(proposal_id) if random.random() > 0.75 else None  # Compute new start_datetime
-                
-                # Mutate the copied schedule
-                original_schedules[mutation_index][1] = start_datetime  # Mutate the start_datetime at this mutation index
-                mutation_indexes.add(mutation_index)
-
-        # Update self.schedules with the mutated schedules
-        self.schedules = original_schedules
-
     
     def remove_clashing_proposals(self) -> None:
         return

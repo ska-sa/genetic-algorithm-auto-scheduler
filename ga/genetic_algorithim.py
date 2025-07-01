@@ -1,55 +1,100 @@
 import random
 from datetime import datetime, date, time, timedelta
 from .proposal import Proposal
-from .timetable import Timetable
+from .individual import Individual
 from .utils import read_proposals_from_csv, get_night_window, get_sunrise_sunset, lst_to_utc
 
-class Genetic_Algorithm():
-    def __init__(self, start_date: date, end_date: date, proposals: list[Proposal], num_of_timetables: int = 5 * 10, num_of_generations: int = 15 * 1000) -> None:
+class GeneticAlgorithm:
+    """
+    Implements a Genetic Algorithm to optimize the scheduling of a set of proposals.
+    """
+    def __init__(self, start_date: date, end_date: date, proposals: list[Proposal], num_of_individuals: int = 5 * 10, num_of_generations: int = 15 * 1000) -> None:
+        """
+        Initializes the GeneticAlgorithm with the given parameters.
+
+        Args:
+            start_date (date): The start date of the scheduling period.
+            end_date (date): The end date of the scheduling period.
+            proposals (list[Proposal]): The list of proposals to be scheduled.
+            num_of_individuals (int, optional): The number of Individuals in the population. Defaults to 5 * 10.
+            num_of_generations (int, optional): The number of generations to evolve the population. Defaults to 15 * 1000.
+
+        Returns:
+            None
+        """
         self.start_date: date = start_date
         self.end_date: date = end_date
         self.proposals: list[Proposal] = proposals
-        self.num_of_timetables: int = num_of_timetables
+        self.num_of_individuals: int = num_of_individuals
         self.num_of_generations: int = num_of_generations
-        self.timetables: list[Timetable] = list()
-        self.generate_timetables()
+        self.individuals: list[Individual] = list()
+        self.generate_individuals()
 
         for generation in range(num_of_generations):
-            self.timetables.sort(key=lambda timetable: timetable.compute_score(), reverse=True)
+            self.individuals.sort(key=lambda individual: individual.compute_fitness(), reverse=True)
             self.print_fitness(generation)
             self.evolve()
             
-    def generate_timetables(self) -> None:
-        for _ in range(self.num_of_timetables):
-            self.timetables.append(Timetable(self.start_date, self.end_date, self.proposals))
+    def generate_individuals(self) -> None:
+        """
+        Generates the initial population of Individuals for the Genetic Algorithm.
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
+        for _ in range(self.num_of_individuals):
+            self.individuals.append(Individual(self.start_date, self.end_date, self.proposals))
         return
 
     def evolve(self, crossover_rate: float = 0.2, mutation_rate: float = 0.1) -> None:
+        """
+        Evolves the population of Individuals through the genetic algorithm process.
+
+        Args:
+            crossover_rate (float, optional): The rate of crossover operation, ranging from 0.0 to 1.0. Defaults to 0.2.
+            mutation_rate (float, optional): The rate of mutation operation, ranging from 0.0 to 1.0. Defaults to 0.1.
+
+        Returns:
+            None
+        """
         # Elitism: Keep the best timetables
-        self.timetables.sort(key=lambda timetable: timetable.compute_score(), reverse=True)
-        elite_timetables: list[Timetable] = self.timetables[:int(self.num_of_timetables * 0.75)]
+        self.individuals.sort(key=lambda individual: individual.compute_fitness(), reverse=True)
+        elite_individuals: list[Individual] = self.individuals[:int(self.num_of_individuals * 0.75)]
         
-        starting_index: int = self.num_of_timetables - 1 - int(self.num_of_timetables * crossover_rate)
+        starting_index: int = self.num_of_individuals - 1 - int(self.num_of_individuals * crossover_rate)
         
-        for index in range(starting_index, self.num_of_timetables, 1):
-            parent_timetable_1: Timetable = random.choice(elite_timetables)
-            parent_timetable_2: Timetable = random.choice(elite_timetables)
+        for index in range(starting_index, self.num_of_individuals, 1):
+            parent_individual_1: Individual = random.choice(elite_individuals)
+            parent_individual_2: Individual = random.choice(elite_individuals)
             num_offsprings: int = random.randint(4, 8)
-            offsprings: list[Timetable] = list()
+            offsprings: list[Individual] = list()
         
             for _ in range(num_offsprings):
-                offspring: Timetable = Timetable(self.start_date, self.end_date, self.proposals, parent_timetable_1.crossover(parent_timetable_2.schedules))
+                offspring: Individual = Individual(self.start_date, self.end_date, self.proposals, parent_individual_1.crossover(parent_individual_2.schedules))
                 offspring.mutation(mutation_rate=mutation_rate)
                 offsprings.append(offspring)
         
-            offsprings.sort(key=lambda timetable: timetable.compute_score(), reverse=True)
-            offsprint_timetable: Timetable = random.choice(offsprings[:max(2, int(num_offsprings * 0.4))])
-            self.timetables[index] = offsprint_timetable
+            offsprings.sort(key=lambda individual: individual.compute_fitness(), reverse=True)
+            offspring_individual: Individual = random.choice(offsprings[:max(2, int(num_offsprings * 0.4))])
+            self.individuals[index] = offspring_individual
         return
 
+
     def print_fitness(self, generation: int) -> None:
+        """
+        Prints the fitness scores of the top and bottom Individuals in the current population.
+
+        Args:
+            generation (int): The current generation number.
+
+        Returns:
+            None
+        """
         # Calculate fitness scores for the first up to 5 timetables
-        fitness_scores = [timetable.compute_score() for timetable in self.timetables[:min(5, len(self.timetables))]]
+        fitness_scores = [individual.compute_fitness() for individual in self.individuals[:min(5, len(self.individuals))]]
         
         # Sort fitness scores in descending order
         sorted_scores = sorted(fitness_scores, reverse=True)
@@ -62,13 +107,21 @@ class Genetic_Algorithm():
         print(f"Generation {generation + 1}:\t", end="")
         print(", ".join(f"{score:3.2f}" for score in fittest_two), end=", ..., ")
         print(", ".join(f"{score:3.2f}" for score in least_fittest_two))
+        return
 
+    def get_best_fit_individual(self) -> Individual:
+        """
+        Retrieves the Individual with the highest fitness score from the current population.
 
+        Args:
+            None
 
-    def get_best_fit_timetable(self) -> Timetable:
-        # Sort timetables by score and return the best one
-        self.timetables.sort(key=lambda timetable: timetable.compute_score(), reverse=True)
-        self.timetables[0].remove_clashing_proposals()
-        return self.timetables[0]
+        Returns:
+            Individual: The Individual with the highest fitness score in the current population.
+        """
+        # Sort individuals by score and return the best one
+        self.individuals.sort(key=lambda individual: individual.compute_fitness(), reverse=True)
+        return self.individuals[0]
+
 
 

@@ -1,12 +1,11 @@
+from __future__ import annotations
 import random
 import csv
-import matplotlib.pyplot as plt
 import numpy as np
 from datetime import datetime, date, time, timedelta
-from .proposal import Proposal
 import copy
 
-def compute_score(self, proposal_id: str) -> float:
+def compute_score(proposal_id: str) -> float:
     """
     Calculates the score for the given proposal based on its proposal_id.
 
@@ -30,7 +29,7 @@ def read_proposals_from_csv(file_path: str) -> list[Proposal]:
         list[Proposal]: A list of Proposal objects created from the CSV data.
     """
     proposals = []
-    
+    from .proposal import Proposal
     try:
         with open(file_path, 'r') as file:
             reader = csv.DictReader(file)
@@ -68,7 +67,7 @@ def read_proposals_from_csv(file_path: str) -> list[Proposal]:
 
                 if int(row['simulated_duration']) <= 0:
                     continue  # Invalid data with simulated duration less than or equal to 0 sec
-
+                
                 proposals.append(Proposal(
                     int(row['id']),
                     row['description'],
@@ -231,3 +230,65 @@ def parse_time(time_str: str) -> time:
         return time(hour, minute, second)
     except ValueError as e:
         raise ValueError(f"Invalid time format: {time_str}. Error: {e}")
+    
+def random_date(min_date: date, max_date: date) -> date:
+    """
+    Generate a random date between the given minimum and maximum dates.
+
+    Args:
+        min_date (date): The minimum date (inclusive) for the random date.
+        max_date (date): The maximum date (inclusive) for the random date.
+
+    Returns:
+        date: A random date between the given minimum and maximum dates.
+    """
+    delta = max_date - min_date
+    random_days = random.randint(0, delta.days)
+    return min_date + timedelta(days=random_days)
+
+
+def random_time(start_time: time, end_time: time) -> time:
+    """
+    Generate a random time between the given start and end times.
+
+    If the end time is less than the start time, it is assumed to be on the next day.
+
+    Args:
+        start_time (time): The start time (inclusive) for the random time.
+        end_time (time): The end time (inclusive) for the random time.
+
+    Returns:
+        time: A random time between the given start and end times.
+    """
+    # Convert start and end time to total seconds
+    start_seconds = start_time.hour * 3600 + start_time.minute * 60 + start_time.second
+    end_seconds = end_time.hour * 3600 + end_time.minute * 60 + end_time.second
+
+    # If the end time is less than the start time, it means it wraps to the next day
+    if end_seconds < start_seconds:
+        end_seconds += 24 * 60 * 60 
+
+    # Generate a random time in seconds between start and end
+    random_seconds = random.randint(start_seconds, end_seconds)
+
+    # Convert back to hours, minutes, seconds
+    hours, remainder = divmod(random_seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    return time(hour=hours % 24, minute=minutes, second=seconds)  # Ensure hours are within 24
+
+def generate_datetime(proposal: Proposal, start_date: date, end_date: date) -> datetime:
+    for _ in range(10):  # Retry up to 10 times
+        # Randomly generate a date between start_date and end_date
+        randomly_generated_date = random_date(start_date, end_date)
+
+        # Randomly generate a time between lst_start_time and lst_end_time
+        randomly_generated_time = random_time(proposal.lst_start_time, proposal.lst_start_end_time)
+
+        # Combine date and time to get the start datetime
+        start_datetime = datetime.combine(randomly_generated_date, randomly_generated_time)
+
+        # Check if all constraints are met
+        if proposal.all_constraints_met(start_datetime):
+            return start_datetime
+    
+    return None  # Return None if no valid datetime is found after itertations

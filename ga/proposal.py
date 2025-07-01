@@ -1,5 +1,5 @@
 from datetime import datetime, date, time, timedelta
-from utils import lst_to_utc, get_night_window, get_sunrise_sunset
+from .utils import lst_to_utc, get_night_window, get_sunrise_sunset
 
 class Proposal():
     """Represents a proposal for a telescope observation"""
@@ -70,8 +70,8 @@ class Proposal():
         # Check each constraint and store the results
         is_time_constraint_met = self.lst_start_end_time_constraint_met(proposed_start_datetime)
         is_night_obs_constraint_met = self.night_obs_constraint_met(proposed_start_datetime)
-        is_avoid_sunrise_sunset_constraint_met = self.avoid_sunrise_sunset_contraint_met(proposed_start_datetime)
-
+        is_avoid_sunrise_sunset_constraint_met = self.avoid_sunrise_sunset_constraint_met(proposed_start_datetime)
+        
         # Return True only if all constraints are satisfied
         return (is_time_constraint_met and
                 is_night_obs_constraint_met and
@@ -121,7 +121,7 @@ class Proposal():
 
         return True  # If night observations are not required, the constraint is considered met
 
-    def avoid_sunriset_sunset_constraint_met(self, proposed_start_datetime: datetime) -> bool:
+    def avoid_sunrise_sunset_constraint_met(self, proposed_start_datetime: datetime) -> bool:
         """
         Check if the proposed datetime avoids sunrise and sunset constraints.
 
@@ -146,3 +146,29 @@ class Proposal():
             return not (is_sunrise_within_proposal or is_sunset_within_proposal)
 
         return True
+    
+    def can_be_scheduled(self, start_date: date, end_date: date) -> bool:
+        """
+        Check if a proposal can be scheduled based on the specified start and end dates.
+
+        Args:
+            start_date (date): The start date of the scheduling range.
+            end_date (date): The end date of the scheduling range.
+
+        Returns:
+            bool: True if the proposal can be scheduled within the date range, False otherwise.
+        """
+        for day in range((end_date - start_date).days + 1):  # Include the last day
+            current_date = start_date + timedelta(days=day)
+
+            # Prepare the possible start times for the current day
+            min_start_time = lst_to_utc(current_date, self.lst_start_time)
+            max_start_time = lst_to_utc(current_date, self.lst_start_end_time)
+
+            # Check if any proposed start time meets all constraints
+            for start_time in [min_start_time, max_start_time]:
+                if self.all_constraints_met(start_time):
+                    return True  # Proposal can be scheduled on this day
+
+        return False
+    
