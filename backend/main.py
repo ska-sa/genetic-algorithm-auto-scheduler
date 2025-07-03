@@ -159,13 +159,17 @@ def main() -> None:
     print(f"Fintess of an Individual (Randomly Generated): {individual.compute_fitness()}")
     
     # Generate the individuals using the genetic algorithm
-    genetic_algorithm: Genetic_Algorithm = Genetic_Algorithm(num_of_individuals=10, num_of_generations=5000)
+    genetic_algorithm: Genetic_Algorithm = Genetic_Algorithm(num_of_individuals=10, num_of_generations=500)
     
     # Get the best timetable from the genetic algorithm
     best_timetable: Timetable = Timetable(genetic_algorithm.get_best_fit_individual().schedules)
     
-    # Print the best timetable
+    # Plot the best timetable
     best_timetable.plot()
+
+    # Plot clash free best timetable
+    best_timetable.remove_clashes()
+    best_timetable.plot(filename_suffix="_clash_free")
 
 if __name__ == "__main__":
     main()

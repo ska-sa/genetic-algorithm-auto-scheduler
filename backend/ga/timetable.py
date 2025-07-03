@@ -39,27 +39,30 @@ class Timetable(Individual):
             None
         """
         schedules: list[Proposal] = self.schedules.copy()  # Create a copy to avoid modifying the original list during iteration
-        for i in range(len(schedules)):
+        i = 0
+        while i < len(schedules):
             proposal_i: Proposal = schedules[i]
             if proposal_i.scheduled_start_datetime is None:
+                i += 1
                 continue
-            for j in range(i + 1, len(schedules)):
+            j = i + 1
+            while j < len(schedules):
                 proposal_j: Proposal = schedules[j]
                 if proposal_j.scheduled_start_datetime is None:
+                    j += 1
                     continue
                 
                 # Check if the proposals have overlapping time slots
                 if (proposal_i.scheduled_start_datetime <= proposal_j.scheduled_start_datetime < proposal_i.scheduled_start_datetime + timedelta(seconds=proposal_i.simulated_duration)) or \
                 (proposal_j.scheduled_start_datetime <= proposal_i.scheduled_start_datetime < proposal_j.scheduled_start_datetime + timedelta(seconds=proposal_j.simulated_duration)):
-                    # Randomly remove one of the clashing proposals
-                    
-                    if random.random() < 0.5:
-                        schedules.pop(j)
-                    else:
-                        schedules.pop(i)
+                    schedules.pop(j)
+                    continue
+                j += 1
+            if i < len(schedules):
+                i += 1
         
         self.schedules = schedules  # Update the schedules list with the modified version
-    
+
 
     def plot(self, filename_suffix: str = ''):
         """
