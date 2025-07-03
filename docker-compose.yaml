@@ -1,12 +1,12 @@
 version: '3.8'
 
 services:
-  genetic-algorithm-auto-scheduler:
-    image: genetic-algorithm-auto-scheduler-image-image
-    container_name: genetic-algorithm-auto-scheduler-image-container
+  auto-scheduler-backend-service:
+    image: auto-scheduler-backend-image
+    container_name: auto-scheduler-backend-container
     build:
-      context: .
+      context: ./backend
       dockerfile: Dockerfile
     volumes:
-      - ./outputs:/app/outputs
-      - ./proposals/csv/ObsList1737538994939.csv:/app/proposals/csv/ObsList1737538994939.csv
+      - ./backend/outputs:/app/outputs
+      - ./backend/proposals/csv/ObsList.csv:/app/proposals/csv/ObsList.csv
