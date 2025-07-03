@@ -1,3 +1,4 @@
+import random
 from datetime import timedelta, date
 from matplotlib import pyplot as plt
 from .proposal import Proposal
@@ -9,14 +10,55 @@ END_DATE: date = date.today()
 PROPOSALS: list[Proposal] = []
 
 class Timetable(Individual):
+    """
+    The Timetable class represents a schedule of proposals.
+    """
     def __init__(self, schedules: list[Proposal] = []):
+        """
+        Initialize the Timetable object.
+
+        Args:
+            schedules (list[Proposal], optional): A list of Proposal objects to be included in the timetable. Defaults to an empty list.
+
+        Returns:
+            None
+        """
         global START_DATE, END_DATE, PROPOSALS
         START_DATE, END_DATE, proposals_dict = get_global_vars()
         PROPOSALS = [Proposal.from_dict(p) for p in proposals_dict]
         super(Timetable, self).__init__(schedules)
     
-    def remove_clashing_proposals(self) -> None:
-        return
+    def remove_clashes(self) -> None:
+        """
+        Removes any clashing proposals from the timetable using the scheduled_start_datetime and simulated_duration attributes of each proposal in the timetable's schedules list. If any two proposals have overlapping time slots, one of them is randomly removed from the timetable.
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
+        schedules: list[Proposal] = self.schedules.copy()  # Create a copy to avoid modifying the original list during iteration
+        for i in range(len(schedules)):
+            proposal_i: Proposal = schedules[i]
+            if proposal_i.scheduled_start_datetime is None:
+                continue
+            for j in range(i + 1, len(schedules)):
+                proposal_j: Proposal = schedules[j]
+                if proposal_j.scheduled_start_datetime is None:
+                    continue
+                
+                # Check if the proposals have overlapping time slots
+                if (proposal_i.scheduled_start_datetime <= proposal_j.scheduled_start_datetime < proposal_i.scheduled_start_datetime + timedelta(seconds=proposal_i.simulated_duration)) or \
+                (proposal_j.scheduled_start_datetime <= proposal_i.scheduled_start_datetime < proposal_j.scheduled_start_datetime + timedelta(seconds=proposal_j.simulated_duration)):
+                    # Randomly remove one of the clashing proposals
+                    
+                    if random.random() < 0.5:
+                        schedules.pop(j)
+                    else:
+                        schedules.pop(i)
+        
+        self.schedules = schedules  # Update the schedules list with the modified version
     
 
     def plot(self):
