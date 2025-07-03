@@ -10,106 +10,47 @@
 
 ## Getting Started
 
-### Cloning the Project
+### Cloning the Repository
 
-- To clone the project, run the following command in your terminal:
+- `git clone https://github.com/ska-sa/genetic-algorithm-auto-scheduler`
 
-```git clone https://github.com/ska-sa/genetic-algorithm-auto-scheduler```
+### Running thr Backend:
 
-- Make sure you are within the project folder, if not. Then use the following command:
+- Open new terminal, and `cd backend`.
 
-```cd genetic-algorithm-auto-scheduler```
+- Create Virtual Environment `virtualenv venv`.
 
-### Adding the CSV File:
-
-```mkdir -p proposals/csv```
+- Activate Virtual Environment `. venv/bin/activate`.
 
 - Please download the sensitive CSV file from [Proposals CSV File](https://drive.google.com/file/d/1uKx0ocyvraKuRoVFqLJ_8v3jRMwQrhCL/view).
 
-- Move the downloaded CSV file into the `proposals/csv` directory.
+- Move the downloaded CSV file into the `proposals/csv/`.
 
-- Rename the file to `ObsList1737538994939.csv`
+- Rename the file to `ObsList.csv`.
 
-- Ensure that the `proposals/csv` directories exist and contain the necessary `ObsList1737538994939.csv` file before moving to the next step.
+- Install dependecies `pip install -r requirements.txt`.
 
-### Running the Code
+- Run backend script `python main.py`, this should generate timetable images into `outputs/`.
 
-#### Using Virtual Environment
+### Running entire Application with Docker Compose
 
-- To set up virtual environments
+- Open new terminal.
 
-```virtualenv venv```
-
-- To activate the virtual environment
-
-```. venv/bin/activate```
-
-- To install dependencies
-
-```venv/bin/python -m pip install -r requirements.txt```
-
-- To run the main script:
-
-```venv/bin/python main.py```
-
-- After successfully running the main script, the output image can be found here: `outputs/'week 02-09-2025 to 02-15-2025 timetable.png'`
-
-#### Using Docker
-
-- To build a Docker image:
-
-```docker build -t genetic-algorithm-auto-scheduler-image .```
-
-- To run the Docker image:
-
-```
-docker run -it --name genetic-algorithm-auto-scheduler-container \
-  -v $(pwd)/outputs:/app/outputs \
-  -v $(pwd)/proposals/csv/ObsList1737538994939.csv:/app/ObsList1737538994939.csv \
-  genetic-algorithm-auto-scheduler-image
-```
-
-- To build an image using Docker Compose:
-
-```docker-compose build```
-
-- To start the container using Docker Compose:
-
-```docker-compose up```
-
-- To stop the container using Docker Compose:
-
-```docker-compose down```
+- Build and start app containers `docker-compose up --build`.
 
 ### File Structure
 
-- classes/: Contains the class definitions used in the project.
+- **backend/**: For the backend files including the GA module.
 
-- outputs/: Contains the .PNG output images of the generated weekly timetable.
+- **fake/**: For Fake KATStore and ObsData API (Todo).
 
-- proposals/csv: Contains the Excel spreadsheet of proposals (excluded from git).
+- **res**: Contains images used in the README.md.
 
-- res/: Contains README.md file images.
+- **.gitignore**: Specifies files to ignore in version control.
 
-- tests/: Contains the pytest unit tests for this project.
+- **docker-compose.yaml**: Defines Docker container configuration.
 
-- venv/: Virtual environment for Python dependencies (excluded from git).
-
-- .dockerignore: Specifies files to ignore when building Docker images.
-
-- .gitignore: Specifies files to ignore in version control.
-
-- Dockerfile: Contains the instructions to build the Docker image for the project.
-
-- docker-compose.yaml: Defines Docker container configuration.
-
-- main.py: The main entry point for the application.
-
-- Makefile: Defines the custom CLI commands for automating admin tasks of the project.
-
-- README.md: This project description file.
-
-- requirements.txt: Lists the dependencies required for the project.
+- **README.md**: This project description file.
 
 ## What is Genetic Algorithm?
 
