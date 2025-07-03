@@ -1,11 +1,11 @@
-*venv/
+venv/
 
-*__pycache__/
+__pycache__/
 
 proposals/
 
-outputs/timetable*
-
-outputs/*2025.png
-
 *.DS_Store
+
+obs_data.json
+
+global_vars.json
