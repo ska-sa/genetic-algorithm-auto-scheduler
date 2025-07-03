@@ -46,7 +46,13 @@ def update_global_vars(start_date: date = date.today(), end_date: date = date.to
 
 def parse_time(time_str: str) -> time:
     """
-    Parse a time string in the format "HH:MM" and return a datetime.time object.
+    Parses a time string in the format "HH:MM" and returns a datetime.time object.
+
+    Args:
+        time_str (str): A time string in the format "HH:MM".
+
+    Returns:
+        time: A datetime.time object representing the parsed time.
     """
     hour, minute = map(int, time_str.split(":"))
     return time(hour, minute)
@@ -65,21 +71,31 @@ def compute_score(proposal_id: str) -> float:
     return float(random.randint(1, 4))
 
 def lst_to_utc(date: date, lst_time: time) -> datetime:
+    """
+    Converts a Local Sidereal Time (LST) time to a UTC datetime.
+
+    Args:
+        date (date): The date for which the LST time is given.
+        lst_time (time): The LST time to be converted to UTC.
+
+    Returns:
+        datetime: The UTC datetime corresponding to the given LST time and date.
+    """
     return datetime.combine(date, lst_time)
 
 def get_night_window(date: date) -> tuple[datetime, datetime]:
     """
-    Return night datetime window for that day in Cape Town.
-    
-    Parameters:
-    date (date): The date for which to calculate the night window.
-    
+    Returns the night datetime window for the given date in Cape Town.
+
+    Args:
+        date (date): The date for which to calculate the night window.
+
     Returns:
-    tuple[datetime, datetime]: Start and end datetime of the night window.
+        tuple[datetime, datetime]: The start and end datetime of the night window.
     """
     # Start of the night at 18:00 (6 PM)
     start_datetime = datetime(date.year, date.month, date.day, 18, 0, 0)
-    
+
     # End of the night at 06:00 (6 AM) the next day
     end_datetime = start_datetime + timedelta(hours=12)  # 18:00 to 06:00 next day
 
@@ -87,13 +103,13 @@ def get_night_window(date: date) -> tuple[datetime, datetime]:
 
 def get_sunrise_sunset(date: date) -> tuple[datetime, datetime]:
     """
-    Return sunrise and sunset datetime for that day in Cape Town.
-    
-    Parameters:
-    date (date): The date for which to calculate sunrise and sunset.
-    
+    Returns the sunrise and sunset datetime for the given date in Cape Town.
+
+    Args:
+        date (date): The date for which to calculate the sunrise and sunset.
+
     Returns:
-    tuple[datetime, datetime]: Sunrise and sunset datetime objects.
+        tuple[datetime, datetime]: The sunrise and sunset datetime objects.
     """
     # Set average sunrise and sunset times
     sunrise_datetime = datetime(date.year, date.month, date.day, 6, 0, 0)  # 6:00 AM

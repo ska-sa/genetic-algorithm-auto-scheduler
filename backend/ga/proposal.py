@@ -175,6 +175,15 @@ class Proposal():
                 is_avoid_sunrise_sunset_constraint_met)
     
     def to_dict(self) -> dict:
+        """
+        Converts the Proposal object to a dictionary representation.
+
+        Args:
+            None
+
+        Returns:
+            dict: A dictionary containing the fields of the Proposal object.
+        """
         return {
             "id": self.id,
             "description": self.description,
@@ -198,9 +207,17 @@ class Proposal():
             "score": self.score
         }
     
-
     @classmethod
     def from_dict(cls, data: dict) -> "Proposal":
+        """
+        Constructs a Proposal object from a dictionary representation.
+
+        Args:
+            data (dict): A dictionary containing the fields of the Proposal object.
+
+        Returns:
+            Proposal: A Proposal object initialized with the values from the input dictionary.
+        """
         return cls(
             id=data["id"],
             description=data["description"],
@@ -231,6 +248,4 @@ class Proposal():
             avoid_dates_end_date=[date.fromisoformat(d) for d in data["avoid_dates_end_date"]],
             score=data["score"]
         )
-
-
 

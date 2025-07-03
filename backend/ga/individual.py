@@ -9,14 +9,32 @@ END_DATE: date = date.today()
 PROPOSALS: list[Proposal] = []
 
 def generate_random_date() -> date:
+    """
+    Randomly generates a date between START_DATE and END_DATE.
+
+    Args:
+        None
+
+    Returns:
+        date: A randomly generated date between START_DATE and END_DATE.
+    """
     delta_days: int = (END_DATE - START_DATE).days
     days: int = random.randint(0, delta_days)
     return START_DATE + timedelta(days=days)
 
 def generate_random_start_datetime(proposal: Proposal) -> datetime|None:
+    """
+    Generates a random start datetime for a proposal, ensuring that all constraints are met.
+
+    Args:
+        proposal (Proposal): The proposal object for which to generate a random start datetime.
+
+    Returns:
+        datetime|None: A randomly generated start datetime that meets all constraints, or None if no valid datetime could be found.
+    """
     for _ in range(5):
         if random.random() > 0.75:
-            return None
+            break
         start_date = generate_random_date()
         earliest_datetime = datetime.combine(date=start_date, time=proposal.lst_start_time)
         latest_datetime = datetime.combine(date=start_date, time=proposal.lst_start_end_time)
@@ -25,6 +43,7 @@ def generate_random_start_datetime(proposal: Proposal) -> datetime|None:
         proposed_start_datetime:datetime = earliest_datetime + timedelta(seconds=seconds)
         if proposal.all_constraints_met(proposed_start_datetime):
             return proposed_start_datetime
+    return None
 
 class Individual:
     """
