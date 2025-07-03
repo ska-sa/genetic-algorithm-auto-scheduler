@@ -61,7 +61,16 @@ class Timetable(Individual):
         self.schedules = schedules  # Update the schedules list with the modified version
     
 
-    def plot(self):
+    def plot(self, filename_suffix: str = ''):
+        """
+        Generates a weekly timetable plot for the scheduled proposals.It creates a series of weekly timetable plots, one for each week between the START_DATE and END_DATE. Each plot shows the scheduled proposals for that week, with the proposals represented as colored blocks on a grid of days and times. The method uses the schedules attribute of the Timetable object to retrieve the proposal information, and it generates a legend to identify each proposal. The plots are saved as PNG files in the 'outputs' directory, with the file name including the start and end dates of the week.
+
+        Args:
+            filename_suffix (str): An optional suffix to be added to the file name of the generated plots.
+
+        Returns:
+            None
+        """
         global START_DATE, END_DATE, PROPOSALS
         # Define days of the week and colors
         days_of_week = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -71,7 +80,7 @@ class Timetable(Individual):
         # Calculate the number of weeks between the start and end dates
         num_weeks = (END_DATE - START_DATE).days // 7 + 1
 
-        # Get total number of schduled proposals
+        # Get total number of scheduled proposals
         total_scheduled_proposals = sum(1 for schedule in self.schedules if schedule.scheduled_start_datetime is not None)
 
         for week_num in range(num_weeks):
@@ -157,9 +166,7 @@ class Timetable(Individual):
             ax.legend(handles, legend_dict.keys(), title="Proposals", loc='upper left', bbox_to_anchor=(1, 1))
 
             # Save the plot to a file
-            filename =  f"outputs/week_{week_start_date.strftime('%Y-%m-%d')}-{week_end_date.strftime('%Y-%m-%d')}.png"
+            filename =  f"outputs/week_{week_start_date.strftime('%Y-%m-%d')}_{week_end_date.strftime('%Y-%m-%d')}{filename_suffix}.png"
             plt.tight_layout()
             plt.savefig(filename, dpi=200)  # Save the figure as a PNG file
             plt.close(fig)  # Close the figure to free up memory
-
-
