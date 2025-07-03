@@ -2,7 +2,9 @@ venv/
 
 __pycache__/
 
-proposals/
+backend/proposals/csv
+
+backend/proposals/*.json
 
 *.DS_Store
 
