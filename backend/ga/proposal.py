@@ -1,5 +1,5 @@
 from datetime import datetime, date, time, timedelta
-from ga.utils import lst_to_utc, get_night_window, get_sunrise_sunset
+from .utils import lst_to_utc, get_night_window, get_sunrise_sunset
 
 class Proposal():
     """ A class representing proposals to be scheduled.
@@ -174,7 +174,78 @@ class Proposal():
                 is_night_obs_constraint_met and
                 is_avoid_sunrise_sunset_constraint_met)
     
+    def to_dict(self) -> dict:
+        """
+        Converts the Proposal object to a dictionary representation.
+
+        Args:
+            None
+
+        Returns:
+            dict: A dictionary containing the fields of the Proposal object.
+        """
+        return {
+            "id": self.id,
+            "description": self.description,
+            "proposal_id": self.proposal_id,
+            "owner_email": self.owner_email,
+            "instrument_product": self.instrument_product,
+            "instrument_integration_time": self.instrument_integration_time,
+            "instrument_band": self.instrument_band,
+            "instrument_pool_resources": self.instrument_pool_resources,
+            "lst_start_time": self.lst_start_time.isoformat(),
+            "lst_start_end_time": self.lst_start_end_time.isoformat(),
+            "simulated_duration": self.simulated_duration,
+            "night_obs": self.night_obs,
+            "avoid_sunrise_sunset": self.avoid_sunrise_sunset,
+            "minimum_antennas": self.minimum_antennas,
+            "general_comments": self.general_comments,
+            "prefered_dates_start_date": [d.isoformat() for d in self.prefered_dates_start_date],
+            "prefered_dates_end_date": [d.isoformat() for d in self.prefered_dates_end_date],
+            "avoid_dates_start_date": [d.isoformat() for d in self.avoid_dates_start_date],
+            "avoid_dates_end_date": [d.isoformat() for d in self.avoid_dates_end_date],
+            "score": self.score
+        }
     
-     
-    # def get_proposal_by_id(self, proposal_id: int):
-    #   return next((p for p in self.proposals if p.id == proposal_id), None)
+    @classmethod
+    def from_dict(cls, data: dict) -> "Proposal":
+        """
+        Constructs a Proposal object from a dictionary representation.
+
+        Args:
+            data (dict): A dictionary containing the fields of the Proposal object.
+
+        Returns:
+            Proposal: A Proposal object initialized with the values from the input dictionary.
+        """
+        return cls(
+            id=data["id"],
+            description=data["description"],
+            proposal_id=data["proposal_id"],
+            owner_email=data["owner_email"],
+            instrument_product=data["instrument_product"],
+            instrument_integration_time=data["instrument_integration_time"],
+            instrument_band=data["instrument_band"],
+            instrument_pool_resources=data["instrument_pool_resources"],
+            lst_start_time=time(
+                hour=int(data["lst_start_time"].split(":")[0]),
+                minute=int(data["lst_start_time"].split(":")[1]),
+                second=int(data["lst_start_time"].split(":")[2])
+            ),
+            lst_start_end_time=time(
+                hour=int(data["lst_start_end_time"].split(":")[0]),
+                minute=int(data["lst_start_end_time"].split(":")[1]),
+                second=int(data["lst_start_end_time"].split(":")[2])
+            ),
+            simulated_duration=data["simulated_duration"],
+            night_obs=data["night_obs"],
+            avoid_sunrise_sunset=data["avoid_sunrise_sunset"],
+            minimum_antennas=data["minimum_antennas"],
+            general_comments=data["general_comments"],
+            prefered_dates_start_date=[date.fromisoformat(d) for d in data["prefered_dates_start_date"]],
+            prefered_dates_end_date=[date.fromisoformat(d) for d in data["prefered_dates_end_date"]],
+            avoid_dates_start_date=[date.fromisoformat(d) for d in data["avoid_dates_start_date"]],
+            avoid_dates_end_date=[date.fromisoformat(d) for d in data["avoid_dates_end_date"]],
+            score=data["score"]
+        )
+

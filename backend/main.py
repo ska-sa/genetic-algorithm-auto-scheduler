@@ -1,66 +1,17 @@
 import csv
 import random
-from datetime import datetime, date, time, timedelta
+from datetime import date, time, datetime, timedelta
+from ga.proposal import Proposal
+from ga.utils import parse_time, compute_score, get_global_vars, update_global_vars
+from ga.individual import Individual
+from ga.timetable import Timetable
+from ga.genetic_algorithim import Genetic_Algorithm
 
-def compute_score(proposal_id: str) -> float:
-    """
-    Calculates the score for the given proposal based on its proposal_id.
+START_DATE: date = date.today()
+END_DATE: date = date.today()
+PROPOSALS: list[Proposal] = []
 
-    Args:
-        proposal_id (str): The unique identifier of the proposal.
-
-    Returns:
-        float: The calculated score for the proposal.
-    """
-    # TODO: Implement the logic for calculating the proposal score
-    return float(random.randint(1, 4))
-
-
-def lst_to_utc(date: date, lst_time: time) -> datetime:
-    return datetime.combine(date, lst_time)
-
-def get_night_window(date: date) -> tuple[datetime, datetime]:
-    """
-    Return night datetime window for that day in Cape Town.
-    
-    Parameters:
-    date (date): The date for which to calculate the night window.
-    
-    Returns:
-    tuple[datetime, datetime]: Start and end datetime of the night window.
-    """
-    # Start of the night at 18:00 (6 PM)
-    start_datetime = datetime(date.year, date.month, date.day, 18, 0, 0)
-    
-    # End of the night at 06:00 (6 AM) the next day
-    end_datetime = start_datetime + timedelta(hours=12)  # 18:00 to 06:00 next day
-
-    return (start_datetime, end_datetime)
-
-def get_sunrise_sunset(date: date) -> tuple[datetime, datetime]:
-    """
-    Return sunrise and sunset datetime for that day in Cape Town.
-    
-    Parameters:
-    date (date): The date for which to calculate sunrise and sunset.
-    
-    Returns:
-    tuple[datetime, datetime]: Sunrise and sunset datetime objects.
-    """
-    # Set average sunrise and sunset times
-    sunrise_datetime = datetime(date.year, date.month, date.day, 6, 0, 0)  # 6:00 AM
-    sunset_datetime = datetime(date.year, date.month, date.day, 18, 0, 0)  # 6:00 PM
-    return sunrise_datetime, sunset_datetime
-
-
-def parse_time(time_str: str) -> time:
-    """
-    Parse a time string in the format "HH:MM" and return a datetime.time object.
-    """
-    hour, minute = map(int, time_str.split(":"))
-    return time(hour, minute)
-
-def can_be_scheduled_proposal(proposal: "Proposal", start_date: date, end_date: date) -> bool:
+def can_be_scheduled(proposal: Proposal, start_date: date, end_date: date) -> bool:
     """
     Checks if a proposal can be scheduled within the given start and end dates.
 
@@ -80,8 +31,8 @@ def can_be_scheduled_proposal(proposal: "Proposal", start_date: date, end_date: 
             if proposal.all_constraints_met(current_datetime):
                 return True
     return False
-   
-def read_proposals_from_csv(file_path: str) -> list["Proposal"]:
+
+def read_proposals_from_csv(file_path: str) -> list[Proposal]:
     """
     Reads a CSV file containing proposals and returns a list of Proposal objects.
 
@@ -92,7 +43,6 @@ def read_proposals_from_csv(file_path: str) -> list["Proposal"]:
         list[Proposal]: A list of Proposal objects created from the CSV data.
     """
     proposals = []
-    from .proposal import Proposal
     try:
         with open(file_path, 'r') as file:
             reader = csv.DictReader(file)
@@ -162,32 +112,64 @@ def read_proposals_from_csv(file_path: str) -> list["Proposal"]:
     return proposals
     
 
-def filter_proposals_by_date(proposals: list["Proposal"],start_date: date, end_date: date) -> list["Proposal"]:
+def filter_proposals(proposals: list[Proposal]) -> list[Proposal]:
     """Filter proposals based on the given date range.
     
     Args:
         proposals (list[Proposal]): List of proposals to filter.
-        start_date (date): Start date of the range.
-        end_date (date): End date of the range.
     
     Returns:
         list[Proposal]: Filtered list of proposals.
     """
-    filtered_proposals: list["Proposal"] = list()
+    filtered_proposals: list[Proposal] = list()
 
-    total_timetable_duration: int = (end_date - start_date).total_seconds()
-    cumulative_timetable_duration: int = 0
+    total_timetable_duration: int = (END_DATE - START_DATE).total_seconds()
+    cumulative_duration: int = 0
 
     # Iterate through each proposal and check if it can be scheduled
     for proposal in proposals:
-
-        if not can_be_scheduled_proposal(proposal, start_date, end_date):  # Check if the proposal can be scheduled
+        if not can_be_scheduled(proposal, START_DATE, END_DATE):
             continue
         
-        cumulative_timetable_duration += proposal.simulated_duration
-        if cumulative_timetable_duration > total_timetable_duration * 0.85:
+        cumulative_duration += proposal.simulated_duration
+        if cumulative_duration > total_timetable_duration:
             break
         
-        filtered_proposals.append(proposal) # Add the proposal if it can be scheduled
-    return filtered_proposals
+        filtered_proposals.append(proposal)  # Add the proposal if it can be scheduled
     
+    return filtered_proposals
+
+def main() -> None:
+    global START_DATE, END_DATE, PROPOSALS
+    START_DATE = date(2024, 1, 1)
+    END_DATE = date(2024, 1, 22)
+    proposals = read_proposals_from_csv("./proposals/csv/ObsList.csv")
+    random.shuffle(proposals)
+    filtered_proposals = filter_proposals(proposals)
+
+    PROPOSALS = filtered_proposals
+    update_global_vars(START_DATE, END_DATE, [p.to_dict() for p in PROPOSALS])
+
+    # Print number of original and filtered proposals
+    print(f"Number of proposals: {len(proposals)}")
+    print(f"Number of proposals (Filtered): {len(get_global_vars()[2])}")
+
+    # Generate a random individual
+    individual = Individual()
+    print(f"Fintess of an Individual (Randomly Generated): {individual.compute_fitness()}")
+    
+    # Generate the individuals using the genetic algorithm
+    genetic_algorithm: Genetic_Algorithm = Genetic_Algorithm(num_of_individuals=10, num_of_generations=500)
+    
+    # Get the best timetable from the genetic algorithm
+    best_timetable: Timetable = Timetable(genetic_algorithm.get_best_fit_individual().schedules)
+    
+    # Plot the best timetable
+    best_timetable.plot()
+
+    # Plot clash free best timetable
+    best_timetable.remove_clashes()
+    best_timetable.plot(filename_suffix="_clash_free")
+
+if __name__ == "__main__":
+    main()
