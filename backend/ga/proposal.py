@@ -22,11 +22,11 @@ class Proposal():
         avoid_sunrise_sunset: bool,
         minimum_antennas: int,
         general_comments: str,
-        prefered_dates_start_date: list[date],
-        prefered_dates_end_date: list[date],
-        avoid_dates_start_date: list[date],
-        avoid_dates_end_date: list[date],
-        score: float,
+        prefered_dates_start_date: list[date] = [],
+        prefered_dates_end_date: list[date] = [],
+        avoid_dates_start_date: list[date] = [],
+        avoid_dates_end_date: list[date] = [],
+        score: float = 1,
         scheduled_start_datetime: datetime | None = None,
     ) -> None:
         """ Initializing the Proposal object with its attributes
