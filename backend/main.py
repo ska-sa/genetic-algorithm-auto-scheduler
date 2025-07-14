@@ -134,7 +134,7 @@ def create_timetable(create_timetable_request: CreateTimetableRequestModel):
     update_global_vars(start_date=start_date, end_date=end_date, proposals=[p.to_dict() for p in proposals])
 
     # Generate the individuals using the genetic algorithm
-    genetic_algorithm: Genetic_Algorithm = Genetic_Algorithm(num_of_individuals=10, num_of_generations=1000)
+    genetic_algorithm: Genetic_Algorithm = Genetic_Algorithm(num_of_individuals=10, num_of_generations=50)
     
     # Get the best individual from the genetic algorithm
     scheduled_proposals: list[Proposal] = genetic_algorithm.get_best_fit_individual().schedules
