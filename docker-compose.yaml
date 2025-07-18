@@ -10,4 +10,4 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./backend/output:/app/output
+      - ./backend/outputs:/app/outputs
