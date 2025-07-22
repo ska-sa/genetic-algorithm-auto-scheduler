@@ -1,7 +1,6 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { Proposal } from '../interfaces/proposal';
 import { environment } from '../../environments/environment';
 import { TimetableModel } from '../interfaces/timetable-model';
 
@@ -9,7 +8,7 @@ import { TimetableModel } from '../interfaces/timetable-model';
   providedIn: 'root'
 })
 export class TimetableService {
-  url: string = `http://${environment.host}:${3000}/timetables`;
+  url: string = `http://${environment.host}:${environment.port}/api/v1/timetables/`;
   headers: HttpHeaders = new HttpHeaders({
       'Content-Type': 'application/json'
     });
