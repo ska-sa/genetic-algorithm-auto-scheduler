@@ -44,8 +44,8 @@ export class TimetablesComponent {
               instrument_integration_time: Number(pd.instrument_integration_time),
               instrument_band: pd.instrument_band,
               instrument_pool_resources: pd.instrument_pool_resources,
-              lst_start_time: pd.lst_start_time,
-              lst_start_end_time: pd.lst_start_end_time,
+              lst_start_time: pd.lst_start,
+              lst_start_end_time: pd.lst_start_end,
               simulated_duration: Number(pd.simulated_duration),
               night_obs: pd.night_obs === 'true',
               avoid_sunrise_sunset: pd.avoid_sunrise_sunset === 'true',
@@ -60,7 +60,7 @@ export class TimetablesComponent {
             });
           }
           this.timetables.push({
-            id: Number(td.id), // Convert the ID to a number
+            id: Number(1), // Convert the ID to a number
             start_date: new Date(td.start_date),
             end_date: new Date(td.end_date),
             proposals: proposals
