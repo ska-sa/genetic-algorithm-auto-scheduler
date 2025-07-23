@@ -1,4 +1,4 @@
-import { Component, signal, ChangeDetectorRef, Input } from '@angular/core';
+import { Component, signal, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FullCalendarModule } from '@fullcalendar/angular';
 import { CalendarOptions, DateSelectArg, EventClickArg, EventApi } from '@fullcalendar/core';
@@ -46,9 +46,8 @@ export class CalendarComponent {
   ]);
 
   constructor(private changeDetector: ChangeDetectorRef) {
-    console.log(eventsSignal())
+    console.log(eventsSignal());
   }
-
 
   handleCalendarToggle() {
     this.calendarVisible.update((bool) => !bool);
