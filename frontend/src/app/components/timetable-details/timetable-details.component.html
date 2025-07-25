@@ -1,1 +1,3 @@
-<app-calendar [ngClass]="isLoading ? 'none': ''"></app-calendar>
+<ng-container *ngIf="!isLoading">
+    <app-calendar></app-calendar>
+</ng-container>

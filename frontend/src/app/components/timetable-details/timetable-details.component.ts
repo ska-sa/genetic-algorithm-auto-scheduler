@@ -6,13 +6,13 @@ import { TimetableService } from '../../services/timetable.service';
 import { TimetableModel } from '../../interfaces/timetable-model';
 import { Proposal } from '../../interfaces/proposal';
 import { ProposalModel } from '../../interfaces/proposal-model';
-import { NgClass } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { eventsSignal } from '../../signal';
 
 @Component({
   selector: 'app-timetable-details',
   imports: [
-    NgClass,
+    CommonModule,
     CalendarComponent
   ],
   templateUrl: './timetable-details.component.html',
