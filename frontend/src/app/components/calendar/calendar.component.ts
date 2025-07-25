@@ -45,9 +45,7 @@ export class CalendarComponent {
   currentEvents = signal<EventApi[]>([
   ]);
 
-  constructor(private changeDetector: ChangeDetectorRef) {
-    console.log(eventsSignal());
-  }
+  constructor(private changeDetector: ChangeDetectorRef) { }
 
   handleCalendarToggle() {
     this.calendarVisible.update((bool) => !bool);
