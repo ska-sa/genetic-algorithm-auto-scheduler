@@ -21,6 +21,7 @@ import { CommonModule } from '@angular/common';
 export class GenerateTimetableComponent {
   proposals: Proposal[] = [];
   proposalsSelection: boolean[] = [];
+  remainingTime: number = 0.0;
 
   generateTimetableForm: FormGroup;
 
@@ -29,8 +30,8 @@ export class GenerateTimetableComponent {
 
   constructor(private formBuilder: FormBuilder, private timetableService: TimetableService, private proposalService: ProposalService, public router: Router) {
     this.generateTimetableForm = this.formBuilder.group({
-      startDatetime: ['', Validators.required],
-      endDatetime: ['', Validators.required]
+      startDate: ['', Validators.required],
+      endDate: ['', Validators.required]
     }, { validators: this.dateRangeValidator });
   }
 
@@ -42,7 +43,6 @@ export class GenerateTimetableComponent {
   loadProposals(): void {
     this.proposalService.getProposals().subscribe({
       next: (proposalsData: ProposalModel[]) => {
-        console.log('Proposals loaded:', proposalsData);
         this.proposalsSelection = new Array(proposalsData.length).fill(false);
         for (const pd of proposalsData) {
           this.proposals.push({
@@ -54,8 +54,8 @@ export class GenerateTimetableComponent {
             instrument_integration_time: Number(pd.instrument_integration_time),
             instrument_band: pd.instrument_band,
             instrument_pool_resources: pd.instrument_pool_resources,
-            lst_start_time: pd.lst_start_time,
-            lst_start_end_time: pd.lst_start_end_time,
+            lst_start_time: pd.lst_start,
+            lst_start_end_time: pd.lst_start_end,
             simulated_duration: Number(pd.simulated_duration),
             night_obs: pd.night_obs.toLowerCase() === 'true',
             avoid_sunrise_sunset: pd.avoid_sunrise_sunset.toLowerCase() === 'true',
@@ -79,21 +79,23 @@ export class GenerateTimetableComponent {
   }
 
   addProposal(index: number): void {
-    this.proposalsSelection[index] = true;
     this.validateProposalSelection();
+    this.proposalsSelection[index] = !this.proposalsSelection[index];
+    this.remainingTime -= this.proposals[index].simulated_duration;
     return;
   }
 
   removeProposal(index: number): void {
-    this.proposalsSelection[index] = false;
     this.validateProposalSelection();
+    this.proposalsSelection[index] = !this.proposalsSelection[index];
+    this.remainingTime += this.proposals[index].simulated_duration;
     return;
   }
 
   validateProposalSelection(): void {
     const selectedProposals = this.proposals.filter((_, index) => this.proposalsSelection[index]);
     const totalDuration = selectedProposals.reduce((total, proposal) => total + proposal.simulated_duration, 0);
-    const timetableDuration =   Number(this.generateTimetableForm.get('endDatetime')?.value) - Number(this.generateTimetableForm.get('startDatetime')?.value);
+    const timetableDuration =   Number(this.generateTimetableForm.get('endDate')?.value) - Number(this.generateTimetableForm.get('startDate')?.value);
 
     if (totalDuration > timetableDuration) {
       this.generateTimetableForm.setErrors({ 'durationExceeded': true });
@@ -104,7 +106,8 @@ export class GenerateTimetableComponent {
   }
 
   cancelTimetableGeneration(): void {
-    this.generateTimetableForm.reset()
+    this.generateTimetableForm.reset();
+    this.proposalsSelection.fill(false);
     this.showProposalsList = false;
     return;
   }
@@ -123,29 +126,32 @@ export class GenerateTimetableComponent {
           instrument_integration_time: pd.instrument_integration_time.toString(),
           instrument_band: pd.instrument_band,
           instrument_pool_resources: pd.instrument_pool_resources,
-          lst_start_time: pd.lst_start_time,
-          lst_start_end_time: pd.lst_start_end_time,
+          lst_start: pd.lst_start_time,
+          lst_start_end: pd.lst_start_end_time,
           simulated_duration: pd.simulated_duration.toString(),
-          night_obs: pd.night_obs ? 'true' : 'false',
-          avoid_sunrise_sunset: pd.avoid_sunrise_sunset ? 'true' : 'false',
+          night_obs: pd.night_obs ? 'yes' : 'no',
+          avoid_sunrise_sunset: pd.avoid_sunrise_sunset ? 'yes' : 'no',
           minimum_antennas: pd.minimum_antennas.toString(),
           general_comments: pd.general_comments || '',
-          scheduled_start_datetime: pd.scheduled_start_datetime ? pd.scheduled_start_datetime.toISOString() : ''
+          scheduled_start_datetime: ''
         });
       }
     });
 
     const timetableData: TimetableModel = {
-      id: "0", // This will be set by the backend
-      start_date: this.generateTimetableForm.get('startDatetime')?.value,
-      end_date: this.generateTimetableForm.get('endDatetime')?.value,
+      start_date: this.generateTimetableForm.get('startDate')?.value,
+      end_date: this.generateTimetableForm.get('endDate')?.value,
       proposals: selectedProposals
     };
 
     this.timetableService.postTimetable(timetableData).subscribe({
       next: (timetable: TimetableModel) => {
-        console.log('Timetable generated:', timetable);
         this.proposalsSelection = new Array(this.proposals.length).fill(false);
+        this.generateTimetableForm.reset();
+        this.showProposalsList = false;
+        if(confirm("Timetable generated successfully, do you want to open it?")) {
+          this.router.navigate(['user', 'timetables', timetable.id, 'details']);
+        }
       },
       error: (error: any) => {
         console.error('Error generating timetable:', error);
@@ -156,8 +162,17 @@ export class GenerateTimetableComponent {
   }
 
   dateRangeValidator(group: FormGroup): { [key: string]: boolean } {
-    const start = group.get('startDatetime')?.value;
-    const end = group.get('endDatetime')?.value;
+    const start = group.get('startDate')?.value;
+    const end = group.get('endDate')?.value;
     return start > end ? { dateRangeInvalid: true } : {};
+  }
+
+  next(): void {
+    this.showProposalsList = true;
+    const startDateString: string = this.generateTimetableForm.get('startDate')?.value ?? 'now';
+    const endDateString: string = this.generateTimetableForm.get('endDate')?.value ?? 'now';
+    const startDate = new Date(startDateString);
+    const endDate = new Date(endDateString);
+    this.remainingTime = (endDate.getTime() - startDate.getTime()) / 1e3;
   }
 }

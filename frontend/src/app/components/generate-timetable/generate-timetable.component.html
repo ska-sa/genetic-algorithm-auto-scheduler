@@ -1,8 +1,5 @@
 <h3 class="p-3 pb-0 d-flex justify-content-between">
     <span>Generate New Timetable</span>
-    <button class="btn btn-danger px-3" (click)="router.navigate(['user', 'timetables'])">
-        <i class="fa fa-times"></i>
-    </button>
 </h3>
 <div class="container-fluid" [ngClass]="isLoading ? 'd-none' : ''">
     <form class="border p-3" [formGroup]="generateTimetableForm" (ngSubmit)="generateTimetable()">
