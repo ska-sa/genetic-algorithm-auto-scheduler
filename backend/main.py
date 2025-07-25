@@ -31,10 +31,11 @@ class CreateTimetableRequestModel(BaseModel):
     proposals: list[ProposalModel]
 
 
-class TimetableModel(BaseModel):
+class TimetableModel(CreateTimetableRequestModel):
     """Model representing a timetable."""
     id: int
-    proposals: list[ProposalModel]
+    class Config:
+        from_attributes = True
 
 
 app = FastAPI()
@@ -166,7 +167,7 @@ def create_timetable(create_timetable_request: CreateTimetableRequestModel):
                 scheduled_start_datetime=s.scheduled_start_datetime.strftime("%Y-%m-%d %H:%M:%S") if s.scheduled_start_datetime else ""
             )
         )
-    timetable = TimetableModel(id=timetable_id, proposals=scheduled_proposals_models)
+    timetable = TimetableModel(id=timetable_id, start_date=create_timetable_request.start_date, end_date=create_timetable_request.end_date, proposals=scheduled_proposals_models)
     timetables.append(timetable)
     return timetable
 
