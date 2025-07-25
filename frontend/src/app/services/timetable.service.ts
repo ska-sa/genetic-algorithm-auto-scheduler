@@ -25,4 +25,8 @@ export class TimetableService {
   getTimetables(): Observable<TimetableModel[]> {
     return this.httpClient.get<TimetableModel[]>(this.url, { headers: this.headers });
   }
+
+  deleteTimetable(timetableId: number): Observable<TimetableModel> {
+    return this.httpClient.delete<TimetableModel>(`${this.url}${timetableId}`, { headers: this.headers });
+  }
 }

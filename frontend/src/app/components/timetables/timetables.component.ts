@@ -7,7 +7,6 @@ import { Proposal } from '../../interfaces/proposal';
 import { TimetableModel } from '../../interfaces/timetable-model';
 import { ProposalModel } from '../../interfaces/proposal-model';
 
-
 @Component({
   selector: 'app-timetables',
   imports: [
@@ -29,8 +28,10 @@ export class TimetablesComponent {
   }
 
   loadTimetables(): void {
+    this.isLoading = true;
     this.timetableService.getTimetables().subscribe({
       next: (timetableData: TimetableModel[]) => {
+        this.timetables = []; // C;ear timetables list
         for (const td of timetableData) {
           let proposals: Proposal[] = [];
           const proposalsData: ProposalModel[] = td.proposals;
@@ -60,7 +61,7 @@ export class TimetablesComponent {
             });
           }
           this.timetables.push({
-            id: Number(1), // Convert the ID to a number
+            id: Number(td.id), // Convert the ID to a number
             start_date: new Date(td.start_date),
             end_date: new Date(td.end_date),
             proposals: proposals
@@ -70,6 +71,18 @@ export class TimetablesComponent {
       },
       error: (error) => {
         console.error('Error loading timetables:', error);
+      }
+    });
+  }
+
+  deleteTimetable(timetableId: number) : void{
+    this.timetableService.deleteTimetable(timetableId).subscribe({
+      next: (timetableModel: TimetableModel) => {
+        console.log(`Timetable ${timetableId} deleted successfully.`);
+        this.loadTimetables();
+      },
+      error: (error: Error) => {
+        console.error(error);
       }
     });
   }

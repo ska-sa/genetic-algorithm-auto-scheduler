@@ -1,62 +1,70 @@
 <h3 class="p-3">
   Timetables
 </h3>
-<div class="container-fluid px-4" [ngClass]="isLoading ? 'd-none' : ''">
-  <div class="row fw-bold border px-1 py-2">
-    <div class="col-1">
-      ID
+<ng-container *ngIf="!isLoading">
+  <div class="container-fluid px-4">
+    <div class="row fw-bold border px-1 py-2">
+      <div class="col-1">
+        ID
+      </div>
+      <div class="col">
+        Start Datetime
+      </div>
+      <div class="col">
+        End Datetime
+      </div>
+      <div class="col-2">
+        No. of Proposals
+      </div>
+      <div class="col-2 text-end">
+        Action
+      </div>
     </div>
-    <div class="col">
-      Start Datetime
-    </div>
-    <div class="col">
-      End Datetime
-    </div>
-    <div class="col-2">
-      No. of Proposals
-    </div>
-    <div class="col-2 text-end">
-      Action
-    </div>
-  </div>
-  <div class="row justify-content-end bg-light px-1 py-2 border-bottom">
+    <div class="row justify-content-end bg-light px-1 py-2 border-bottom">
       <button class="col-1 btn btn-sm btn-primary" (click)="router.navigate(['/user', 'timetables', 'generate'])">
         <i class="fas fa-plus"></i> Generate
       </button>
+    </div>
+    <div class="row px-1 py-2 border-bottom" *ngFor="let timetable of timetables; let i = index">
+      <div class="col-1">
+        {{ i + 1 }}
+      </div>
+      <div class="col">
+        {{ timetable.start_date | date:'yyyy-MM-dd' }}
+      </div>
+      <div class="col">
+        {{ timetable.end_date | date:'yyyy-MM-dd' }}
+      </div>
+      <div class="col-2">
+        {{ timetable.proposals.length }}
+      </div>
+      <div class="col-2 text-end">
+        
+        <button class="btn btn-sm btn-outline-info" (click)="router.navigate(['/user', 'timetables', timetable.id, 'details'])">
+          <i class="fas fa-eye"></i> View
+        </button>
+        &nbsp;
+        <!--
+        <button class="btn btn-sm btn-outline-dark" (click)="router.navigate(['/user', 'timetables', timetable.id, 'edit'])">
+          <i class="fas fa-pen"></i> Edit
+        </button>
+        &nbsp;
+        -->
+        <button class="btn btn-sm btn-outline-danger" (click)="deleteTimetable(timetable.id)">
+          <i class="fas fa-trash"></i> Delete
+        </button>
+      </div>
+    </div>
+    <ng-container *ngIf="timetables.length == 0">
+      <div class="row px-1 py-2 border-bottom">
+        <h5 class="text-center">No data</h5>
+      </div>
+    </ng-container>
   </div>
-  <div class="row px-1 py-2 border-bottom" *ngFor="let timetable of timetables; let i = index">
-    <div class="col-1">
-      {{ i + 1 }}
-    </div>
-    <div class="col">
-      {{ timetable.start_date | date:'yyyy-MM-dd' }}
-    </div>
-    <div class="col">
-      {{ timetable.end_date | date:'yyyy-MM-dd' }}
-    </div>
-    <div class="col-2">
-      {{ timetable.proposals.length }}
-    </div>
-    <div class="col-2 text-end">
-      
-      <button class="btn btn-sm btn-outline-info" (click)="router.navigate(['/user', 'timetables', timetable.id, 'details'])">
-        <i class="fas fa-eye"></i> View
-      </button>
-      &nbsp;
-      <button class="btn btn-sm btn-outline-dark" (click)="router.navigate(['/user', 'timetables', timetable.id, 'edit'])">
-        <i class="fas fa-pen"></i> Edit
-      </button>
-      &nbsp;
-      <button class="btn btn-sm btn-outline-danger" (click)="router.navigate(['/user', 'timetables', timetable.id, 'edit'])">
-        <i class="fas fa-trash"></i> Delete
-      </button>
-    </div>
+</ng-container>
+<ng-container *ngIf="isLoading">
+  <div class="container-fluid text-center">
+    <i class="fa fa-spinner fa-5x">Loading...</i>
   </div>
-  <div class="row px-1 py-2 border-bottom" *ngIf="timetables.length == 0">
-    <h5 class="text-center">No data</h5>
-  </div>
-</div>
-<div class="container-fluid text-center" [ngClass]="!isLoading ? 'd-none' : ''">
-  <i class="fa fa-spinner fa-5x">Loading...</i>
-</div>
+</ng-container>
 <router-outlet></router-outlet>
