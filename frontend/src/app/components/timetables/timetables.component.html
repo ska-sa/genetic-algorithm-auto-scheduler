@@ -4,54 +4,63 @@
 <ng-container *ngIf="!isLoading">
   <div class="container-fluid px-4">
     <div class="row fw-bold border px-1 py-2">
-      <div class="col-1">
+      <div class="col-1 col-md-1">
         ID
       </div>
-      <div class="col">
-        Start Datetime
+      <div class="col-2 col-md">
+        Name
       </div>
-      <div class="col">
-        End Datetime
+      <div class="col col-md">
+        Start Date & Time
       </div>
-      <div class="col-2">
-        No. of Proposals
+      <div class="col col-md">
+        End Date & Time
       </div>
-      <div class="col-2 text-end">
+      <div class="col-2 col-md">
+        Scheduled Proposals Ratio
+      </div>
+      <div class="col-2 col-md text-end">
         Action
       </div>
     </div>
     <div class="row justify-content-end bg-light px-1 py-2 border-bottom">
       <button class="col-1 btn btn-sm btn-primary" (click)="router.navigate(['/user', 'timetables', 'generate'])">
-        <i class="fas fa-plus"></i> Generate
+        <i class="fas fa-plus me-1"></i>
+        <span class="d-none d-lg-inline">Generate</span>
       </button>
     </div>
     <div class="row px-1 py-2 border-bottom" *ngFor="let timetable of timetables; let i = index">
-      <div class="col-1">
+      <div class="col-1 col-md-1">
         {{ i + 1 }}
       </div>
-      <div class="col">
+      <div class="col-2 col-md fst-italic">
+        {{ timetable.name }}
+      </div>
+      <div class="col col-md">
         {{ timetable.start_date | date:'yyyy-MM-dd' }}
       </div>
-      <div class="col">
+      <div class="col col-md">
         {{ timetable.end_date | date:'yyyy-MM-dd' }}
       </div>
-      <div class="col-2">
-        {{ timetable.proposals.length }}
+      <div class="col-2 col-md">
+        {{ getScheduledProposalsCount(timetable) }} / {{ timetable.proposals.length }}
       </div>
-      <div class="col-2 text-end">
-        
+      <div class="col-2 col-md text-end">
         <button class="btn btn-sm btn-outline-info" (click)="router.navigate(['/user', 'timetables', timetable.id, 'details'])">
-          <i class="fas fa-eye"></i> View
+          <i class="fas fa-eye me-1"></i>
+          <span class="d-none d-lg-inline">View</span>
         </button>
         &nbsp;
         <!--
         <button class="btn btn-sm btn-outline-dark" (click)="router.navigate(['/user', 'timetables', timetable.id, 'edit'])">
-          <i class="fas fa-pen"></i> Edit
+          <i class="fas fa-pen me-1"></i>
+          <span class="d-none d-lg-inline">Edit</span>
         </button>
         &nbsp;
         -->
         <button class="btn btn-sm btn-outline-danger" (click)="deleteTimetable(timetable.id)">
-          <i class="fas fa-trash"></i> Delete
+          <i class="fas fa-trash me-1"></i>
+        <span class="d-none d-lg-inline">Delete</span>
         </button>
       </div>
     </div>

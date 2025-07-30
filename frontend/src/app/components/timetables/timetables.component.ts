@@ -51,7 +51,7 @@ export class TimetablesComponent {
               night_obs: pd.night_obs === 'true',
               avoid_sunrise_sunset: pd.avoid_sunrise_sunset === 'true',
               minimum_antennas: Number(pd.minimum_antennas),
-              general_comments: pd.general_comments || null,
+              general_comments: pd.general_comments ?? "",
               score: Number(1),
               scheduled_start_datetime: pd.scheduled_start_datetime ? new Date(pd.scheduled_start_datetime) : null,
               prefered_dates_start_date: [],
@@ -62,6 +62,7 @@ export class TimetablesComponent {
           }
           this.timetables.push({
             id: Number(td.id), // Convert the ID to a number
+            name: td.name,
             start_date: new Date(td.start_date),
             end_date: new Date(td.end_date),
             proposals: proposals
@@ -78,12 +79,16 @@ export class TimetablesComponent {
   deleteTimetable(timetableId: number) : void{
     this.timetableService.deleteTimetable(timetableId).subscribe({
       next: (timetableModel: TimetableModel) => {
-        console.log(`Timetable ${timetableId} deleted successfully.`);
+        //console.log(`Timetable ${timetableId} deleted successfully.`);
         this.loadTimetables();
       },
       error: (error: Error) => {
         console.error(error);
       }
     });
+  }
+
+  getScheduledProposalsCount(timetable: Timetable): number {
+    return timetable.proposals.filter(p => p.scheduled_start_datetime != null).length;
   }
 }
