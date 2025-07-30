@@ -14,7 +14,7 @@ export interface Proposal {
     night_obs: boolean;
     avoid_sunrise_sunset: boolean;
     minimum_antennas: number;
-    general_comments: string | null;
+    general_comments: string;
     prefered_dates_start_date: Date[];
     prefered_dates_end_date: Date[];
     avoid_dates_start_date: Date[];
