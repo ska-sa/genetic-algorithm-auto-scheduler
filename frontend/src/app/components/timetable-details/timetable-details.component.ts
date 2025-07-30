@@ -84,6 +84,7 @@ export class TimetableDetailsComponent implements OnInit{
         });
         this.timetable = {
           id: Number(timetableModel.id),
+          name: timetableModel.name,
           start_date: new Date(timetableModel.start_date),
           end_date: new Date(timetableModel.end_date),
           proposals: proposals
