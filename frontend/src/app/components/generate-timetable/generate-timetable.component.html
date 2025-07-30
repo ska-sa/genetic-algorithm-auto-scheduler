@@ -1,95 +1,135 @@
 <h3 class="p-3 pb-0 d-flex justify-content-between">
     <span>Generate New Timetable</span>
 </h3>
-<div class="container-fluid" [ngClass]="isLoading ? 'd-none' : ''">
-    <form class="border p-3" [formGroup]="generateTimetableForm" (ngSubmit)="generateTimetable()">
-        <p>
-            <span class="fw-bold">Step 1:</span>
-            &nbsp;
-            <span class="fw-lighter fst-italic">Set the start and end dates for the timetable.</span>
-        </p>
-        <div class="from-group pb-4">
-            <label for="startDate">Start&nbsp;Date</label>
-            <input id="startDate" type="date" formControlName="startDate" class="form-control" placeholder="Start Date">
-            <div *ngIf="generateTimetableForm.get('startDate')?.invalid && generateTimetableForm.get('startDate')?.touched" class="text-danger">
-                Start Date is required.
+<ng-container *ngIf="isLoading == false">
+    <div class="container-fluid">
+        <form class="border p-3" [formGroup]="generateTimetableForm" (ngSubmit)="generateTimetable()">
+            <div>
+                <span class="fw-bold">Step 1:</span>
+                &nbsp;
+                <span class="fw-lighter fst-italic">Set the start and end dates for the timetable.</span>
             </div>
-        </div>
-        <div class="from-group pb-4">
-            <label for="endDate">End&nbsp;Date</label>
-            <input id="endDate" type="date" formControlName="endDate" class="form-control" placeholder="End Date">
-            <div *ngIf="generateTimetableForm.get('endDate')?.invalid && generateTimetableForm.get('endDate')?.touched" class="text-danger">
-                End Date is required.
+
+            <!-- Start Date -->
+            <div class="form-group pb-4">
+                <label for="startDate">Start&nbsp;Date</label>
+                <input id="startDate" type="date" formControlName="startDate" class="form-control" placeholder="Start Date"  (change)="showProposalsList ? next(): null">
+                <ng-container *ngIf="generateTimetableForm.get('startDate')?.invalid && generateTimetableForm.get('startDate')?.touched && generateTimetableForm.get('startDate')?.errors?.['required']">
+                    <div class="text-danger">Start Date is required.</div>
+                </ng-container>
+                <ng-container *ngIf="generateTimetableForm.get('startDate')?.errors?.['invalidDate'] && generateTimetableForm.get('startDate')?.touched">
+                    <div class="text-danger">Start Date must be in a valid format (dd/mm/yyyy).</div>
+                </ng-container>
+                <ng-container *ngIf="generateTimetableForm.get('startDate')?.errors?.['startDateInvalid'] && generateTimetableForm.get('startDate')?.touched">
+                    <div class="text-danger">Start Date cannot be in the past. Please select today or a future date.</div>
+                </ng-container>
             </div>
-            <div *ngIf="generateTimetableForm.errors && generateTimetableForm.errors['dateRangeInvalid'] && (generateTimetableForm.get('startDate')?.touched || generateTimetableForm.get('endDate')?.touched)" class="text-danger">
-                End Date must be greater than or equal to Start Date.
+
+            <!-- End Date -->
+            <div class="form-group pb-4">
+                <label for="endDate">End&nbsp;Date</label>
+                <input id="endDate" type="date" formControlName="endDate" class="form-control" placeholder="End Date" (change)="showProposalsList ? next(): null">
+                <ng-container *ngIf="generateTimetableForm.get('endDate')?.invalid && generateTimetableForm.get('endDate')?.touched">
+                    <div class="text-danger">End Date is required.</div>
+                </ng-container>
+                <ng-container *ngIf="generateTimetableForm.get('endDate')?.errors?.['invalidDate'] && generateTimetableForm.get('endDate')?.touched">
+                    <div class="text-danger">End Date must be in a valid format (dd/mm/yyyy).</div>
+                </ng-container>
+                <ng-container *ngIf="generateTimetableForm?.errors?.['dateRangeInvalid'] && (generateTimetableForm.get('startDate')?.touched || generateTimetableForm.get('endDate')?.touched)">
+                    <div class="text-danger">End Date must be greater than or equal to Start Date.</div>
+                </ng-container>
             </div>
-        </div>
-        <div class="from-group pb-4" *ngIf="showProposalsList == false">
-            <button class="btn btn-primary" type="button" (click)="next()" [disabled]="generateTimetableForm.get('startDate')?.invalid || generateTimetableForm.get('endDate')?.invalid">
-                <i class="fa fa-arrow-right"></i> Next
-            </button>
-        </div>
-        <p [ngClass]="showProposalsList ? '' : 'd-none'">
-            <span class="fw-bold">Step 2:</span>
-            &nbsp;
-            <span class="fw-lighter fst-italic">Choose which proposals to include by ticking their corresponding boxes.</span>
-        </p>
-        <div [ngClass]="showProposalsList ? '' : 'd-none'">
-            <div class="row fw-bold bg-light py-2">
-                <div class="col-1">
-                    #
+
+
+            <ng-container *ngIf="showProposalsList == false">
+                <div class="form-group pb-4">
+                    <button class="btn btn-primary" type="button" (click)="next()" [disabled]="generateTimetableForm.invalid">
+                        <i class="fa fa-arrow-right"></i> Next
+                    </button>
                 </div>
-                <div class="col-2">
-                    Proposal ID
+            </ng-container>
+            <ng-container *ngIf="showProposalsList == true">
+                <p>
+                    <span class="fw-bold">Step 2:</span>
+                    &nbsp;
+                    <span class="fw-lighter fst-italic">Choose which proposals to include by ticking their corresponding boxes.</span>
+                </p>
+                <div>
+                    <div class="row fw-bold bg-light py-2">
+                        <div class="col-1">
+                            #
+                        </div>
+                        <div class="col-2">
+                            Proposal ID
+                        </div>
+                        <div class="col-2">
+                            Duration (in sec)
+                        </div>
+                        <div class="col">
+                            Description
+                        </div>
+                        <div class="col-1">
+                            Action
+                        </div>
+                    </div>
+                    <!-- List of Proposals -->
+                    <div class="row border-bottom py-1" *ngFor="let proposal of proposals; let i = index;">
+                        <div class="col-1" [ngClass]="!proposalsSelection[i] ? 'text-decoration-line-through opacity-50' : ''">
+                            {{ i + 1 }}
+                        </div>
+                        <div class="col-2" [ngClass]="!proposalsSelection[i] ? 'text-decoration-line-through opacity-50' : ''">
+                            {{ proposal.proposal_id }}
+                        </div>
+                        <div class="col-2" [ngClass]="!proposalsSelection[i] ? 'text-decoration-line-through opacity-50' : ''">
+                            {{ proposal.simulated_duration  }}
+                        </div>
+                        <div class="col" [ngClass]="!proposalsSelection[i] ? 'text-decoration-line-through opacity-50' : ''">
+                            {{ proposal.description  }}
+                        </div>
+                        <div class="col-1">
+                            <input type="checkbox" class="form-check-input" [checked]="proposalsSelection[i]" (change)="updateProposalSelection(i)" [disabled]="isLoading">
+                        </div>
+                    </div>
+                    <div class="row border-bottom py-1">
+                        <div class="col text-end py-3">
+                            <strong>Remaining Time: </strong>
+                            <span [ngClass]="remainingHours > 0 ? 'text-primary' : 'text-danger'">{{ remainingHours | number:'1.2-2' }} hours</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="col-2">
-                    Duration (in sec)
+
+                <!-- Error Messages -->
+                <ng-container *ngIf="remainingHours < 0">
+                    <div class="text-danger">
+                        Total proposal duration exceeds the allowed timetable duration.
+                    </div>
+                </ng-container>
+
+                <ng-container *ngIf="!proposalsSelection.includes(true)">
+                    <div class="text-danger">
+                        At least 1 proposal should be selected.
+                    </div>
+                </ng-container>
+
+                <!-- Action Buttons -->
+                <div class="text-end pt-3">
+                    <button class="btn btn-outline-danger" type="button" (click)="cancelTimetableGeneration()">
+                        <i class="fa fa-trash"></i> Clear
+                    </button>
+                    &nbsp;
+                    <button class="btn btn-outline-success" type="submit" 
+                        [disabled]="generateTimetableForm.invalid || !proposalsSelection.includes(true) || remainingHours < 0">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> Generate
+                    </button>
                 </div>
-                <div class="col">
-                    Description
-                </div>
-                <div class="col-1">
-                    Action
-                </div>
-            </div>
-            <div class="row border-bottom py-1" *ngFor="let proposal of proposals; let i = index;">
-                <div class="col-1" [ngClass]="!proposalsSelection[i] ? 'text-decoration-line-through opacity-50' : ''">
-                    {{ i + 1 }}
-                </div>
-                <div class="col-2" [ngClass]="!proposalsSelection[i] ? 'text-decoration-line-through opacity-50' : ''">
-                    {{ proposal.proposal_id }}
-                </div>
-                <div class="col-2" [ngClass]="!proposalsSelection[i] ? 'text-decoration-line-through opacity-50' : ''">
-                    {{ proposal.simulated_duration  }}
-                </div>
-                <div class="col" [ngClass]="!proposalsSelection[i] ? 'text-decoration-line-through opacity-50' : ''">
-                    {{ proposal.description  }}
-                </div>
-                <div class="col-1">
-                    <input type="checkbox" class="form-check-input" [checked]="proposalsSelection[i]" (change)="!proposalsSelection[i] ? addProposal(i) : removeProposal(i)" [disabled]="isLoading">
-                </div>
-            </div>
-            <div class="row border-bottom py-1" [ngClass]="showProposalsList ? '' : 'd-none'">
-                <div class="col text-end py-3">
-                    <strong>Remaining Time: </strong>
-                    <span>{{ remainingTime }} seconds</span>
-                </div>
-            </div>
-        </div>
-        <div class="text-end pt-3" [ngClass]="showProposalsList ? '' : 'd-none'">
-            <button class="btn btn-outline-danger" type="button" (click)="cancelTimetableGeneration()">
-                <i class="fa fa-trash"></i> Clear
-            </button>
-            &nbsp;
-            <button class="btn btn-outline-success" type="submit" [disabled]="generateTimetableForm.invalid || !proposalsSelection.includes(true)">
-                <i class="fa-solid fa-wand-magic-sparkles"></i> Generate
-            </button>
-        </div>
-    </form>
-</div>
-<div class="container-fluid text-center" [ngClass]="!isLoading ? 'd-none' : ''">
-    <i class="fa fa-spinner fa-5x">Loading...</i>
-</div>
+            </ng-container>
+        </form>
+    </div>
+</ng-container>
+<ng-container *ngIf="isLoading == true">
+    <div class="container-fluid text-center">
+        <i class="fa fa-spinner fa-5x">Loading...</i>
+    </div>
+</ng-container>
 
 <router-outlet></router-outlet>
