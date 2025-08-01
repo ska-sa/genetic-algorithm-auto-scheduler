@@ -1,6 +1,22 @@
 version: '3.8'
 
 services:
+  fake-obs-data-service:
+    image: fake-obs-data-image
+    container_name: fake-obs-data-container
+    build:
+      context: ./fake
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+  auto-scheduler-frontend-service:
+    image: auto-scheduler-frontend-image
+    container_name: auto-scheduler-frontend-container
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "4200:4200"
   auto-scheduler-backend-service:
     image: auto-scheduler-backend-image
     container_name: auto-scheduler-backend-container

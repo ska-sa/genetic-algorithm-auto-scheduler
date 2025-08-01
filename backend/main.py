@@ -31,10 +31,12 @@ class CreateTimetableRequestModel(BaseModel):
     proposals: list[ProposalModel]
 
 
-class TimetableModel(BaseModel):
+class TimetableModel(CreateTimetableRequestModel):
     """Model representing a timetable."""
     id: int
-    proposals: list[ProposalModel]
+    name: str
+    class Config:
+        from_attributes = True
 
 
 app = FastAPI()
@@ -148,25 +150,34 @@ def create_timetable(create_timetable_request: CreateTimetableRequestModel):
     scheduled_proposals_models: list[ProposalModel] = []
     for s in best_timetable.schedules:
         scheduled_proposals_models.append(ProposalModel(
-                id=str(s.id),
-                description=s.description,
-                proposal_id=s.proposal_id,
-                owner_email=s.owner_email,
-                instrument_product=s.instrument_product,
-                instrument_integration_time=str(s.instrument_integration_time),
-                instrument_band=s.instrument_band,
-                instrument_pool_resources=s.instrument_pool_resources,
-                lst_start=s.lst_start_time.strftime("%H:%M"),
-                lst_start_end=s.lst_start_end_time.strftime("%H:%M"),
-                simulated_duration=str(s.simulated_duration),
-                night_obs="Yes" if s.night_obs else "No",
-                avoid_sunrise_sunset="Yes" if s.avoid_sunrise_sunset else "No",
-                minimum_antennas=str(s.minimum_antennas),
-                general_comments=s.general_comments,
-                scheduled_start_datetime=s.scheduled_start_datetime.strftime("%Y-%m-%d %H:%M:%S") if s.scheduled_start_datetime else ""
+            id=str(s.id),
+            description=s.description,
+            proposal_id=s.proposal_id,
+            owner_email=s.owner_email,
+            instrument_product=s.instrument_product,
+            instrument_integration_time=str(s.instrument_integration_time),
+            instrument_band=s.instrument_band,
+            instrument_pool_resources=s.instrument_pool_resources,
+            lst_start=s.lst_start_time.strftime("%H:%M"),
+            lst_start_end=s.lst_start_end_time.strftime("%H:%M"),
+            simulated_duration=str(s.simulated_duration),
+            night_obs="Yes" if s.night_obs else "No",
+            avoid_sunrise_sunset="Yes" if s.avoid_sunrise_sunset else "No",
+            minimum_antennas=str(s.minimum_antennas),
+            general_comments=s.general_comments,
+            scheduled_start_datetime=s.scheduled_start_datetime.strftime("%Y-%m-%d %H:%M:%S") if s.scheduled_start_datetime else ""
             )
         )
-    timetable = TimetableModel(id=timetable_id, proposals=scheduled_proposals_models)
+    import random
+    names = [
+        "Alpha", "Bravo", "Charlie", "Delta", "Echo", 
+        "Foxtrot", "Golf", "Hotel", "India", "Juliett",
+        "Kilo", "Lima", "Mike", "Hopewell", "Oscar",
+        "Papa", "Quebec", "Romeo", "Sierra", "Tango",
+        "Ester", "Quad", "Jovian", "Lilly", "Agile"
+    ]
+    name = random.choice(names)
+    timetable = TimetableModel(id=timetable_id, name=name, start_date=create_timetable_request.start_date, end_date=create_timetable_request.end_date, proposals=scheduled_proposals_models)
     timetables.append(timetable)
     return timetable
 

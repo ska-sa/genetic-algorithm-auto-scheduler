@@ -1,0 +1,36 @@
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <a class="navbar-brand" routerLink="/user/timetables">
+        <img src="assets/sarao-logo.png" alt="Logo" style="width: auto; height: 40px;">
+    </a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse justify-content-between px-3" id="navbarNav">
+        <ul class="navbar-nav mr-auto">
+            <li class="nav-item f-flex flex-direction-column" [ngClass]="{'active': isActiveRoute('timetables')}">
+                <a class="nav-link" [routerLink]="['/user/timetables']">Timetables</a>
+                <ng-container *ngIf="!router.url.endsWith('timetables')">
+                    <ul class="navbar-nav">
+                        <li class="nav-item" [ngClass]="{'active': isActiveRoute('details')}">
+                            <a class="nav-link" [routerLink]="['timetables', id, 'details']">Details</a>
+                        </li>
+                        <!--
+                        <li class="nav-item" [ngClass]="{'active': isActiveRoute('edit')}">
+                            <a class="nav-link" [routerLink]="['timetables', id, 'edit']">Edit</a>
+                        </li>
+                        -->
+                        <li class="nav-item" [ngClass]="{'active': isActiveRoute('generate')}">
+                            <a class="nav-link" [routerLink]="['timetables', 'generate']">Generate</a>
+                        </li>
+                    </ul>
+                </ng-container>
+            </li>
+        </ul>
+        <ng-container *ngIf="!router.url.endsWith('timetables')">
+            <button class="btn btn-danger px-3" (click)="router.navigate(['user', 'timetables'])">
+                <i class="fa fa-times"></i>
+            </button>
+        </ng-container>
+    </div>
+</nav>
+<router-outlet></router-outlet>
