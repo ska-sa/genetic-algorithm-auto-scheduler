@@ -3,7 +3,7 @@ from datetime import date, datetime
 from fastapi import FastAPI
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
-from ga import Proposal, Genetic_Algorithm, Timetable, update_global_vars, parse_time
+from ga import Proposal, Individual, Genetic_Algorithm, Timetable, update_global_vars, parse_time
 
 class ProposalModel(BaseModel):
     """Model representing a proposal."""
@@ -24,6 +24,7 @@ class ProposalModel(BaseModel):
     general_comments: str
     scheduled_start_datetime: str
     
+
 class CreateTimetableRequestModel(BaseModel):
     """Request model for creating a timetable."""
     start_date: str
@@ -55,6 +56,7 @@ app.add_middleware(
     allow_methods=["*"],  # Allows all HTTP methods
     allow_headers=["*"],  # Allows all headers
 )
+
 @app.get("/")
 def read_root():
     """
@@ -184,7 +186,7 @@ def create_timetable(create_timetable_request: CreateTimetableRequestModel):
 @app.put(router_url_prefix+"{timetable_id}", response_model=TimetableModel)
 def update_timetable(timetable_id: int, timetable: TimetableModel):
     """
-    Updates an existing timetable.
+    Updates an existing timetable by passing it back to the genetic algorithm.
 
     Args:
         timetable_id (int): ID of the timetable to be updated.
@@ -198,6 +200,74 @@ def update_timetable(timetable_id: int, timetable: TimetableModel):
     for t in timetables:
         if t.id == timetable_id:
             t.proposals = timetable.proposals
+            start_date: date = datetime.strptime(t.start_date, "%Y-%m-%d").date()
+            end_date: date = datetime.strptime(t.end_date, "%Y-%m-%d").date()
+            print
+            proposals: list[Proposal] = list()
+            for p in t.proposals:
+                proposal: Proposal = Proposal(
+                    id=int(p.id),
+                    description=p.description,
+                    proposal_id=p.proposal_id,
+                    owner_email=p.owner_email,
+                    instrument_product=p.instrument_product,
+                    instrument_integration_time=float(p.instrument_integration_time),
+                    instrument_band=p.instrument_band,
+                    instrument_pool_resources=p.instrument_pool_resources,
+                    lst_start_time=parse_time(p.lst_start),
+                    lst_start_end_time=parse_time(p.lst_start_end),
+                    simulated_duration=int(p.simulated_duration),
+                    night_obs=True if p.night_obs.lower() == "yes" else False,
+                    avoid_sunrise_sunset=True if p.avoid_sunrise_sunset.lower() == "yes" else False,
+                    minimum_antennas=int(p.minimum_antennas),
+                    general_comments=p.general_comments,
+                    scheduled_start_datetime=datetime.strptime(p.scheduled_start_datetime, "%Y-%m-%d %H:%M:%S") if p.scheduled_start_datetime else None,
+                )
+                proposals.append(proposal)
+            
+            update_global_vars(start_date=start_date, end_date=end_date, proposals=[p.to_dict() for p in proposals])
+
+            initial_individuals: list[Individual] = [
+                Individual(schedules=proposals)
+            ]
+
+            ga: Genetic_Algorithm = Genetic_Algorithm(initial_individuals=initial_individuals, num_of_individuals=10, num_of_generations=50)
+            scheduled_proposals: list[Proposal] = ga.get_best_fit_individual().schedules
+
+            timetable = TimetableModel(
+                id=t.id,
+                name=t.name,
+                start_date=t.start_date,
+                end_date=t.end_date,
+                proposals=[
+                    ProposalModel(
+                        id=str(s.id),
+                        description=s.description,
+                        proposal_id=s.proposal_id,
+                        owner_email=s.owner_email,
+                        instrument_product=s.instrument_product,
+                        instrument_integration_time=str(s.instrument_integration_time),
+                        instrument_band=s.instrument_band,
+                        instrument_pool_resources=s.instrument_pool_resources,
+                        lst_start=s.lst_start_time.strftime("%H:%M"),
+                        lst_start_end=s.lst_start_end_time.strftime("%H:%M"),
+                        simulated_duration=str(s.simulated_duration),
+                        night_obs="Yes" if s.night_obs else "No",
+                        avoid_sunrise_sunset="Yes" if s.avoid_sunrise_sunset else "No",
+                        minimum_antennas=str(s.minimum_antennas),
+                        general_comments=s.general_comments,
+                        scheduled_start_datetime=s.scheduled_start_datetime.strftime("%Y-%m-%d %H:%M:%S") if s.scheduled_start_datetime else ""
+                    ) for s in scheduled_proposals
+                ]
+            )
+
+            best_timetable: Timetable = Timetable(schedules=scheduled_proposals)
+            best_timetable.plot("_updated") # Plot raw updated timetable after genetic algorithm
+            best_timetable.remove_clashes()
+            best_timetable.plot(filename_suffix="_clash_free_updated")# Plot the updated timetable after removing clashes
+
+            timetables = [t if t.id != timetable_id else timetable for t in timetables]
+
             return t
     return {}
 
