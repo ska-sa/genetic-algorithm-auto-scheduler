@@ -5,11 +5,12 @@ class Genetic_Algorithm:
     """
     Implements a Genetic Algorithm to optimize the scheduling of a set of proposals.
     """
-    def __init__(self, num_of_individuals: int = 5 * 10, num_of_generations: int = 15 * 1000) -> None:
+    def __init__(self, initial_individuals: list[Individual] = list(),num_of_individuals: int = 5 * 10, num_of_generations: int = 15 * 1000) -> None:
         """
         Initializes the GeneticAlgorithm with the given parameters.
 
         Args:
+            initial_individuals (list[Individual]): A list of initial Individuals to start the genetic algorithm.
             num_of_individuals (int, optional): The number of Individuals in the population. Defaults to 5 * 10.
             num_of_generations (int, optional): The number of generations to evolve the population. Defaults to 15 * 1000.
 
@@ -18,7 +19,7 @@ class Genetic_Algorithm:
         """
         self.num_of_individuals: int = num_of_individuals
         self.num_of_generations: int = num_of_generations
-        self.individuals: list[Individual] = list()
+        self.individuals: list[Individual] = initial_individuals if initial_individuals else list()
         self.generate_individuals()
 
         for generation in range(num_of_generations):
@@ -36,7 +37,8 @@ class Genetic_Algorithm:
         Returns:
             None
         """
-        for _ in range(self.num_of_individuals):
+        num_of_new_individuals: int = self.num_of_individuals - len(self.individuals)
+        for _ in range(min(num_of_new_individuals, self.num_of_individuals)):
             self.individuals.append(Individual())
         return
 

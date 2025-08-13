@@ -87,6 +87,50 @@ export class TimetablesComponent {
       }
     });
   }
+  
+  updateTimetable(timetableId: number): void {
+    const timetable = this.timetables.find(t => t.id === timetableId);
+    if (!timetable) {
+      console.error(`Timetable with ID ${timetableId} not found.`);
+      return;
+    }
+    const timetablesModel: TimetableModel = {
+      id: timetable.id,
+      name: timetable.name,
+      start_date: timetable.start_date.toISOString().slice(0, 10),
+      end_date: timetable.end_date.toISOString().slice(0, 10),
+      proposals: timetable.proposals.map(p => ({
+        id: String(p.id),
+        owner_email: p.owner_email,
+        description: p.description,
+        proposal_id: p.proposal_id,
+        instrument_product: p.instrument_product,
+        instrument_integration_time: p.instrument_integration_time.toString(),
+        instrument_band: p.instrument_band,
+        instrument_pool_resources: p.instrument_pool_resources,
+        lst_start: p.lst_start_time,
+        lst_start_end: p.lst_start_end_time,
+        simulated_duration: p.simulated_duration.toString(),
+        night_obs: p.night_obs ? 'true' : 'false',
+        avoid_sunrise_sunset: p.avoid_sunrise_sunset ? 'true' : 'false',
+        minimum_antennas: p.minimum_antennas.toString(),
+        general_comments: p.general_comments,
+        scheduled_start_datetime: p.scheduled_start_datetime? p.scheduled_start_datetime.toISOString().slice(0, 19).replace('T', ' ') : ''      
+      }))
+    };
+    this.isLoading = true;
+    this.timetableService.updateTimetable(timetablesModel).subscribe({
+      next: (timetableModel: TimetableModel) => {
+        console.log(`Timetable ${timetableId} updated successfully.`);
+        this.loadTimetables();
+        this.isLoading = false;
+      },
+      error: (error: Error) => {
+        console.error(error);
+        this.isLoading = false;
+      }
+    });
+  }
 
   getScheduledProposalsCount(timetable: Timetable): number {
     return timetable.proposals.filter(p => p.scheduled_start_datetime != null).length;
