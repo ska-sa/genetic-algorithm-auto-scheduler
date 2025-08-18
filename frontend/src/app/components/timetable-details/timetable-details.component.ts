@@ -73,11 +73,31 @@ export class TimetableDetailsComponent implements OnInit{
             let scheduledEndDatetime: Date = new Date(proposalModel.scheduled_start_datetime);
             scheduledEndDatetime.setSeconds(scheduledEndDatetime.getSeconds() + Number(proposalModel.simulated_duration));
             // appending proposals into calender events list.
+            const backgroundColor = (proposalModel.night_obs.toLowerCase() == "yes") ? "#0000a3" : "#ffa400";
+            const textColor = (proposalModel.night_obs.toLowerCase() == "yes") ? "#ffffff" : "#000000";
             events.push({
               id: proposalModel.id,
               title: proposalModel.proposal_id,
               start: scheduledStartDatetime.toISOString(),
               end: scheduledEndDatetime.toISOString(),
+              details: [
+                `Description: ${proposalModel.description}`,
+                `Owner Email: ${proposalModel.owner_email}`,
+                `Instrument Product: ${proposalModel.instrument_product}`,
+                `Integration Time: ${Number(proposalModel.instrument_integration_time) } seconds`,
+                `Band: ${proposalModel.instrument_band}`,
+                `Pool Resources: ${proposalModel.instrument_pool_resources}`,
+                `LST Start: ${proposalModel.lst_start}`,
+                `LST Start End: ${proposalModel.lst_start_end}`,
+                `Night Obs: ${proposalModel.night_obs}`,
+                `Avoid Sunrise/Sunset: ${proposalModel.avoid_sunrise_sunset}`,
+                `Minimum Antennas: ${proposalModel.minimum_antennas}`,
+                `General Comments: ${proposalModel.general_comments}`,
+                `Simulated Duration: ${(Number(proposalModel.simulated_duration) / (60 * 60)).toFixed(2)} hours` // converting seconds to hours
+              ],
+              backgroundColor: backgroundColor,
+              borderColor: (proposalModel.avoid_sunrise_sunset.toLocaleLowerCase() == "yes") ? "#ff0000" : backgroundColor,
+              textColor: textColor,
               allDay: false
             });
         }
