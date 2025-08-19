@@ -1,6 +1,18 @@
-<full-calendar *ngIf='calendarVisible()' [options]='calendarOptions()'>
+<full-calendar class="h-100" *ngIf='calendarVisible()' [options]='calendarOptions()'>
   <ng-template #eventContent let-arg>
-    <b>{{ arg.timeText }}</b>
-    <i>{{ arg.event.title }}</i>
+    <div
+      class="fc-event-tooltip h-100"
+      data-bs-toggle="tooltip"
+      [attr.title]="getTooltipContent(arg)"
+    >
+      <b>{{ arg.timeText }}</b>
+      <i class="text-wrap">{{ arg.event.title }}</i>
+
+      <ng-container *ngIf="isListView()">
+        <div class="text-wrap" *ngFor="let detail of arg.event.extendedProps.details">
+          <i class="event-detail">{{ detail }}</i>
+        </div>
+      </ng-container>
+    </div>
   </ng-template>
 </full-calendar>

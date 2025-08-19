@@ -19,6 +19,7 @@ import { eventsSignal } from '../../signal';
 })
 export class CalendarComponent {
   calendarVisible = signal(true);
+  currentViewType = 'timeGridWeek';
   calendarOptions = signal<CalendarOptions>({
     plugins: [
       interactionPlugin,
@@ -31,13 +32,21 @@ export class CalendarComponent {
       center: 'title',
       right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
     },
-    initialView: 'dayGridMonth',
+    viewDidMount: (arg) => {
+      this.currentViewType = arg.view.type;
+    },
+    initialView: 'timeGridWeek',
     initialEvents: eventsSignal(),
     weekends: true,
     editable: true,
     selectable: true,
     selectMirror: true,
     dayMaxEvents: true,
+    height: 'auto', // prevents vertical scroll
+    contentHeight: 'auto',
+    expandRows: true, // for timeGrid
+    handleWindowResize: true,
+    windowResizeDelay: 100, // optional
     select: this.handleDateSelect.bind(this),
     eventClick: this.handleEventClick.bind(this),
     eventsSet: this.handleEvents.bind(this)
@@ -75,16 +84,29 @@ export class CalendarComponent {
     }
   }
 
+  handleEvents(events: EventApi[]) {
+    this.currentEvents.set(events);
+    this.changeDetector.detectChanges(); // workaround for pressionChangedAfterItHasBeenCheckedError
+  }
+
   handleEventClick(clickInfo: EventClickArg) {
     if (confirm(`Are you sure you want to delete the event '${clickInfo.event.title}'`)) {
       clickInfo.event.remove();
     }
   }
 
-  handleEvents(events: EventApi[]) {
-    this.currentEvents.set(events);
-    this.changeDetector.detectChanges(); // workaround for pressionChangedAfterItHasBeenCheckedError
+  isListView(): boolean {
+    return this.currentViewType.startsWith('list');
   }
+
+  getTooltipContent(arg: any): string {
+  const title = arg.event.title;
+  const time = arg.timeText;
+  const details = arg.event.extendedProps.details || [];
+
+  return [title, ...details].join('\n');
+}
+
 }
 
 

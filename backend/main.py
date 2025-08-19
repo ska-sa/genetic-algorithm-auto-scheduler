@@ -126,8 +126,8 @@ def create_timetable(create_timetable_request: CreateTimetableRequestModel):
             lst_start_time=parse_time(p.lst_start),
             lst_start_end_time=parse_time(p.lst_start_end),
             simulated_duration=int(p.simulated_duration),
-            night_obs=True if p.night_obs.lower() == "yes" else False,
-            avoid_sunrise_sunset=True if p.avoid_sunrise_sunset.lower() == "yes" else False,
+            night_obs=p.night_obs.lower() == "yes",
+            avoid_sunrise_sunset=p.avoid_sunrise_sunset.lower() == "yes",
             minimum_antennas=int(p.minimum_antennas),
             general_comments=p.general_comments,
             scheduled_start_datetime=None,
@@ -163,8 +163,8 @@ def create_timetable(create_timetable_request: CreateTimetableRequestModel):
             lst_start=s.lst_start_time.strftime("%H:%M"),
             lst_start_end=s.lst_start_end_time.strftime("%H:%M"),
             simulated_duration=str(s.simulated_duration),
-            night_obs="Yes" if s.night_obs else "No",
-            avoid_sunrise_sunset="Yes" if s.avoid_sunrise_sunset else "No",
+            night_obs="yes" if s.night_obs else "no",
+            avoid_sunrise_sunset="yes" if s.avoid_sunrise_sunset else "no",
             minimum_antennas=str(s.minimum_antennas),
             general_comments=s.general_comments,
             scheduled_start_datetime=s.scheduled_start_datetime.strftime("%Y-%m-%d %H:%M:%S") if s.scheduled_start_datetime else ""
@@ -199,12 +199,11 @@ def update_timetable(timetable_id: int, timetable: TimetableModel):
     global timetables
     for t in timetables:
         if t.id == timetable_id:
-            t.proposals = timetable.proposals
+            updated_timetable: TimetableModel = timetable
             start_date: date = datetime.strptime(t.start_date, "%Y-%m-%d").date()
             end_date: date = datetime.strptime(t.end_date, "%Y-%m-%d").date()
-            print
             proposals: list[Proposal] = list()
-            for p in t.proposals:
+            for p in timetable.proposals:
                 proposal: Proposal = Proposal(
                     id=int(p.id),
                     description=p.description,
@@ -217,8 +216,8 @@ def update_timetable(timetable_id: int, timetable: TimetableModel):
                     lst_start_time=parse_time(p.lst_start),
                     lst_start_end_time=parse_time(p.lst_start_end),
                     simulated_duration=int(p.simulated_duration),
-                    night_obs=True if p.night_obs.lower() == "yes" else False,
-                    avoid_sunrise_sunset=True if p.avoid_sunrise_sunset.lower() == "yes" else False,
+                    night_obs=p.night_obs.lower() == "yes",
+                    avoid_sunrise_sunset=p.avoid_sunrise_sunset.lower() == "yes",
                     minimum_antennas=int(p.minimum_antennas),
                     general_comments=p.general_comments,
                     scheduled_start_datetime=datetime.strptime(p.scheduled_start_datetime, "%Y-%m-%d %H:%M:%S") if p.scheduled_start_datetime else None,
@@ -234,41 +233,18 @@ def update_timetable(timetable_id: int, timetable: TimetableModel):
             ga: Genetic_Algorithm = Genetic_Algorithm(initial_individuals=initial_individuals, num_of_individuals=10, num_of_generations=50)
             scheduled_proposals: list[Proposal] = ga.get_best_fit_individual().schedules
 
-            timetable = TimetableModel(
-                id=t.id,
-                name=t.name,
-                start_date=t.start_date,
-                end_date=t.end_date,
-                proposals=[
-                    ProposalModel(
-                        id=str(s.id),
-                        description=s.description,
-                        proposal_id=s.proposal_id,
-                        owner_email=s.owner_email,
-                        instrument_product=s.instrument_product,
-                        instrument_integration_time=str(s.instrument_integration_time),
-                        instrument_band=s.instrument_band,
-                        instrument_pool_resources=s.instrument_pool_resources,
-                        lst_start=s.lst_start_time.strftime("%H:%M"),
-                        lst_start_end=s.lst_start_end_time.strftime("%H:%M"),
-                        simulated_duration=str(s.simulated_duration),
-                        night_obs="Yes" if s.night_obs else "No",
-                        avoid_sunrise_sunset="Yes" if s.avoid_sunrise_sunset else "No",
-                        minimum_antennas=str(s.minimum_antennas),
-                        general_comments=s.general_comments,
-                        scheduled_start_datetime=s.scheduled_start_datetime.strftime("%Y-%m-%d %H:%M:%S") if s.scheduled_start_datetime else ""
-                    ) for s in scheduled_proposals
-                ]
-            )
+            # Updating each proposal's scheduled_start_datetime
+            for i, s_p in enumerate(scheduled_proposals):
+                updated_timetable.proposals[i].scheduled_start_datetime = s_p.scheduled_start_datetime.strftime("%Y-%m-%d %H:%M:%S") if s_p.scheduled_start_datetime else "" 
 
             best_timetable: Timetable = Timetable(schedules=scheduled_proposals)
             best_timetable.plot("_updated") # Plot raw updated timetable after genetic algorithm
             best_timetable.remove_clashes()
             best_timetable.plot(filename_suffix="_clash_free_updated")# Plot the updated timetable after removing clashes
 
-            timetables = [t if t.id != timetable_id else timetable for t in timetables]
+            timetables = [t if t.id != timetable_id else updated_timetable for t in timetables]
 
-            return t
+            return updated_timetable
     return {}
 
 @app.delete(router_url_prefix+"{timetable_id}", response_model=TimetableModel)

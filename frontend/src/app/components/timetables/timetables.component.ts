@@ -48,8 +48,8 @@ export class TimetablesComponent {
               lst_start_time: pd.lst_start,
               lst_start_end_time: pd.lst_start_end,
               simulated_duration: Number(pd.simulated_duration),
-              night_obs: pd.night_obs === 'true',
-              avoid_sunrise_sunset: pd.avoid_sunrise_sunset === 'true',
+              night_obs: pd.night_obs == 'yes',
+              avoid_sunrise_sunset: pd.avoid_sunrise_sunset == 'yes',
               minimum_antennas: Number(pd.minimum_antennas),
               general_comments: pd.general_comments ?? "",
               score: Number(1),
@@ -89,7 +89,7 @@ export class TimetablesComponent {
   }
   
   updateTimetable(timetableId: number): void {
-    const timetable = this.timetables.find(t => t.id === timetableId);
+    const timetable = this.timetables.find(t => t.id == timetableId);
     if (!timetable) {
       console.error(`Timetable with ID ${timetableId} not found.`);
       return;
@@ -111,8 +111,8 @@ export class TimetablesComponent {
         lst_start: p.lst_start_time,
         lst_start_end: p.lst_start_end_time,
         simulated_duration: p.simulated_duration.toString(),
-        night_obs: p.night_obs ? 'true' : 'false',
-        avoid_sunrise_sunset: p.avoid_sunrise_sunset ? 'true' : 'false',
+        night_obs: p.night_obs ? 'yes' : 'no',
+        avoid_sunrise_sunset: p.avoid_sunrise_sunset ? 'yes' : 'no',
         minimum_antennas: p.minimum_antennas.toString(),
         general_comments: p.general_comments,
         scheduled_start_datetime: p.scheduled_start_datetime? p.scheduled_start_datetime.toISOString().slice(0, 19).replace('T', ' ') : ''      
