@@ -48,6 +48,7 @@ export class CalendarComponent {
     handleWindowResize: true,
     windowResizeDelay: 100, // optional
     select: this.handleDateSelect.bind(this),
+    eventClick: this.handleEventClick.bind(this),
     eventsSet: this.handleEvents.bind(this)
   });
   currentEvents = signal<EventApi[]>([
@@ -88,10 +89,15 @@ export class CalendarComponent {
     this.changeDetector.detectChanges(); // workaround for pressionChangedAfterItHasBeenCheckedError
   }
 
+  handleEventClick(clickInfo: EventClickArg) {
+    if (confirm(`Are you sure you want to delete the event '${clickInfo.event.title}'`)) {
+      clickInfo.event.remove();
+    }
+  }
+
   isListView(): boolean {
     return this.currentViewType.startsWith('list');
   }
-
 
   getTooltipContent(arg: any): string {
   const title = arg.event.title;
