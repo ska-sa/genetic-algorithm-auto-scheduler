@@ -4,6 +4,33 @@ from datetime import datetime, date, time, timedelta
 
 GLOBAL_VARS_FILE = "tmp/global_vars.json"
 
+SECONDS_PER_DAY: int = 86400
+SIDEREAL_DAY_SECONDS: int = 86164.0905
+J2000: datetime = datetime(2000, 1, 1, 12)  # Reference epoch for JD
+
+# Constants for SKA site
+SKA_LATITUDE_STR: str = "-30:42:39.8"
+SKA_LONGITUDE_STR: str = "21:26:38.0"
+
+def degrees_string_to_float(degrees: str) -> float:
+    """
+    Convert a string in the format "hh:mm:ss.s" to a float in degrees.
+
+    Args:
+        degrees (str): String in the format "hh:mm:ss.s".
+
+    Returns:
+        float: Float representation in degrees.
+    """
+    sign = -1 if degrees.startswith("-") else 1
+    if sign == -1:
+        degrees = degrees[1:]
+    h, m, s = map(float, degrees.split(":"))
+    return sign * (h + m / 60 + s / 3600)
+
+SKA_LATITUDE: float = degrees_string_to_float(SKA_LATITUDE_STR)
+SKA_LONGITUDE: float = degrees_string_to_float(SKA_LONGITUDE_STR)
+
 def get_global_vars() -> tuple[date, date, list[dict]]:
     """
     Get the current values of the global variables from the JSON file.
@@ -70,18 +97,64 @@ def compute_score(proposal_id: str) -> float:
     # TODO: Implement the logic for calculating the proposal score
     return float(random.randint(1, 4))
 
-def lst_to_utc(date: date, lst_time: time) -> datetime:
+def julian_date(date_obj: datetime) -> float:
     """
-    Converts a Local Sidereal Time (LST) time to a UTC datetime.
+    Convert a datetime to Julian Date.
+    """
+    a = (14 - date_obj.month) // 12
+    y = date_obj.year + 4800 - a
+    m = date_obj.month + 12 * a - 3
+
+    jdn = date_obj.day + ((153 * m + 2) // 5) + 365 * y + y // 4 - y // 100 + y // 400 - 32045
+    day_frac = (date_obj.hour - 12) / 24 + date_obj.minute / 1440 + date_obj.second / 86400
+    return jdn + day_frac
+
+def gmst_at_0h_utc(jd: float) -> float:
+    """
+    Compute GMST at 0h UTC in decimal hours.
+    """
+    d = jd - 2451545.0  # Days since J2000
+    gmst = 6.697374558 + 0.06570982441908 * d + 1.00273790935 * 0
+    return gmst % 24
+
+def lst_to_utc(date_obj: date, lst_time: time, longitude: float = SKA_LONGITUDE) -> datetime:
+    """
+    Convert Local Sidereal Time (LST) to UTC datetime (approximate method).
 
     Args:
-        date (date): The date for which the LST time is given.
-        lst_time (time): The LST time to be converted to UTC.
+        date_obj (date): UTC calendar date.
+        lst_time (time): LST as time object.
+        longitude (float): Observer longitude in degrees East (default is SKA site).
 
     Returns:
-        datetime: The UTC datetime corresponding to the given LST time and date.
+        datetime: Approximate UTC datetime corresponding to the given LST.
     """
-    return datetime.combine(date, lst_time)
+    # 1. Convert LST to decimal hours
+    lst_hours: float = lst_time.hour + lst_time.minute / 60 + lst_time.second / 3600
+
+    # 2. Convert observer longitude from degrees to hours
+    longitude_hours: float = longitude / 15.0
+
+    # 3. Compute Julian Date at 0h UTC for the given date
+    jd_0h: float = julian_date(datetime.combine(date_obj, time(0, 0, 0)))
+
+    # 4. Compute GMST at 0h UTC
+    gmst0: float = gmst_at_0h_utc(jd_0h)
+
+    # 5. Calculate Greenwich Sidereal Time (GST) from Local Sidereal Time (LST)
+    gst: float = (lst_hours - longitude_hours) % 24
+
+    # 6. Difference between GST and GMST at 0h UTC (in sidereal hours)
+    delta_sidereal_hours: float = (gst - gmst0) % 24
+
+    # 7. Convert sidereal time to solar (UTC) time
+    SIDEREAL_TO_SOLAR: float = 0.9972695663  # conversion factor
+    delta_utc_hours: float = delta_sidereal_hours * SIDEREAL_TO_SOLAR
+
+    # 8. Compute the UTC datetime
+    utc_datetime: datetime = datetime.combine(date_obj, time(0, 0, 0)) + timedelta(hours=delta_utc_hours)
+
+    return utc_datetime.replace(microsecond=0)
 
 def get_night_window(date: date) -> tuple[datetime, datetime]:
     """
