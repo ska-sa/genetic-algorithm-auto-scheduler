@@ -180,12 +180,12 @@ def get_night_window(date: date) -> tuple[datetime, datetime]:
 
     return (start_datetime, end_datetime)
 
-def get_sunrise_sunset(at_date: date, latitude: float = SKA_LATITUDE, longitude: float = SKA_LONGITUDE) -> tuple[datetime, datetime]:
+def get_sunrise_sunset(date: date, latitude: float = SKA_LATITUDE, longitude: float = SKA_LONGITUDE) -> tuple[datetime, datetime]:
     """
     Calculate sunrise and sunset times for a given date, latitude, and longitude.
 
     Args:
-        at_date (date): The date for which to calculate the sunrise and sunset.
+        date (date): The date for which to calculate the sunrise and sunset.
         latitude (float): The latitude of the location.
         longitude (float): The longitude of the location.
 
@@ -194,7 +194,7 @@ def get_sunrise_sunset(at_date: date, latitude: float = SKA_LATITUDE, longitude:
     """
 
     # 1. Get the day of the year
-    N = at_date.timetuple().tm_yday
+    N = date.timetuple().tm_yday
 
     # 2. Convert the longitude to hour value and calculate an approximate time
     lng_hour = longitude / 15.0
@@ -274,15 +274,24 @@ def get_sunrise_sunset(at_date: date, latitude: float = SKA_LATITUDE, longitude:
     UT_set = force_range(UT_set, 24.0)
 
     # Convert UT to naive datetime objects
-    sunrise = datetime.combine(at_date, time(0, 0, 0)) + timedelta(hours=UT_rise)
-    sunset = datetime.combine(at_date, time(0, 0, 0)) + timedelta(hours=UT_set)
+    sunrise = datetime.combine(date, time(0, 0, 0)) + timedelta(hours=UT_rise)
+    sunset = datetime.combine(date, time(0, 0, 0)) + timedelta(hours=UT_set)
 
     return sunrise.replace(second=0, microsecond=0), sunset.replace(second=0, microsecond=0)
 
-def force_range(v, max):
-    # Force v to be >= 0 and < max
-    if v < 0:
-        return v + max
-    elif v >= max:
-        return v - max
-    return v
+def force_range(value: float, max_value: float):
+    """
+    Adjusts the value to wrap around within the range [0, max).
+
+    Args:
+        value (float): The value to adjust.
+        max_value (float): The exclusive upper bound of the range.
+
+    Returns:
+        float: The adjusted value within the range [0, max).
+    """
+    if value < 0:
+        return value + max_value
+    elif value >= max_value:
+        return value - max_value
+    return value
