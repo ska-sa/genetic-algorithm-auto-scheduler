@@ -1,3 +1,4 @@
+import math
 import json
 import random
 from datetime import datetime, date, time, timedelta
@@ -11,6 +12,11 @@ J2000: datetime = datetime(2000, 1, 1, 12)  # Reference epoch for JD
 # Constants for SKA site
 SKA_LATITUDE_STR: str = "-30:42:39.8"
 SKA_LONGITUDE_STR: str = "21:26:38.0"
+
+ZENITH = 90 + 50 / 60  # Official zenith for sunrise/sunset in degrees
+
+# MATH CONSTANT
+TO_RAD = math.pi/180.0
 
 def degrees_string_to_float(degrees: str) -> float:
     """
@@ -174,17 +180,118 @@ def get_night_window(date: date) -> tuple[datetime, datetime]:
 
     return (start_datetime, end_datetime)
 
-def get_sunrise_sunset(date: date) -> tuple[datetime, datetime]:
+def get_sunrise_sunset(date: date, latitude: float = SKA_LATITUDE, longitude: float = SKA_LONGITUDE) -> tuple[datetime, datetime]:
     """
-    Returns the sunrise and sunset datetime for the given date in Cape Town.
+    Calculate sunrise and sunset times for a given date, latitude, and longitude.
 
     Args:
         date (date): The date for which to calculate the sunrise and sunset.
+        latitude (float): The latitude of the location.
+        longitude (float): The longitude of the location.
 
     Returns:
-        tuple[datetime, datetime]: The sunrise and sunset datetime objects.
+        tuple[datetime, datetime]: The sunrise and sunset times as naive datetime objects.
     """
-    # Set average sunrise and sunset times
-    sunrise_datetime = datetime(date.year, date.month, date.day, 6, 0, 0)  # 6:00 AM
-    sunset_datetime = datetime(date.year, date.month, date.day, 18, 0, 0)  # 6:00 PM
-    return sunrise_datetime, sunset_datetime
+
+    # 1. Get the day of the year
+    N = date.timetuple().tm_yday
+
+    # 2. Convert the longitude to hour value and calculate an approximate time
+    lng_hour = longitude / 15.0
+    t_rise = N + ((6 - lng_hour) / 24)  # For sunrise
+    t_set = N + ((18 - lng_hour) / 24)  # For sunset
+
+    # 3a. Calculate the Sun's mean anomaly
+    M_rise = (0.9856 * t_rise) - 3.289
+    M_set = (0.9856 * t_set) - 3.289
+
+    # 3b. Calculate the Sun's true longitude
+    L_rise = M_rise + (1.916 * math.sin(TO_RAD * M_rise)) + (0.020 * math.sin(TO_RAD * 2 * M_rise)) + 282.634
+    L_set = M_set + (1.916 * math.sin(TO_RAD * M_set)) + (0.020 * math.sin(TO_RAD * 2 * M_set)) + 282.634
+
+    # Adjust L into the range [0, 360)
+    L_rise = force_range(L_rise, 360)
+    L_set = force_range(L_set, 360)
+
+    # 4a. Calculate the Sun's declination
+    sinDec_rise = 0.39782 * math.sin(TO_RAD * L_rise)
+    cosDec_rise = math.cos(math.asin(sinDec_rise))
+
+    sinDec_set = 0.39782 * math.sin(TO_RAD * L_set)
+    cosDec_set = math.cos(math.asin(sinDec_set))
+
+    # 4b. Calculate the Sun's local hour angle
+    cosH_rise = (math.cos(TO_RAD * ZENITH) - (sinDec_rise * math.sin(TO_RAD * latitude))) / (cosDec_rise * math.cos(TO_RAD * latitude))
+    cosH_set = (math.cos(TO_RAD * ZENITH) - (sinDec_set * math.sin(TO_RAD * latitude))) / (cosDec_set * math.cos(TO_RAD * latitude))
+
+    # Check if the sun never rises or sets
+    if cosH_rise > 1:
+        return None, None  # The sun never rises
+    if cosH_set < -1:
+        return None, None  # The sun never sets
+
+    # 4c. Finish calculating H and convert into hours
+    H_rise = 360 - (1 / TO_RAD) * math.acos(cosH_rise)
+    H_set = (1 / TO_RAD) * math.acos(cosH_set)
+
+    H_rise /= 15
+    H_set /= 15
+
+    # 5a. Calculate the Sun's right ascension
+    RA_rise = (1 / TO_RAD) * math.atan(0.91764 * math.tan(TO_RAD * L_rise))
+    RA_set = (1 / TO_RAD) * math.atan(0.91764 * math.tan(TO_RAD * L_set))
+
+    # Adjust RA into the range [0, 360)
+    RA_rise = force_range(RA_rise, 360)
+    RA_set = force_range(RA_set, 360)
+
+    # 5b. Right ascension value needs to be in the same quadrant as L
+    L_quadrant_rise = (math.floor(L_rise / 90)) * 90
+    RA_quadrant_rise = (math.floor(RA_rise / 90)) * 90
+    RA_rise += (L_quadrant_rise - RA_quadrant_rise)
+
+    L_quadrant_set = (math.floor(L_set / 90)) * 90
+    RA_quadrant_set = (math.floor(RA_set / 90)) * 90
+    RA_set += (L_quadrant_set - RA_quadrant_set)
+
+    # 5c. Right ascension value needs to be converted into hours
+    RA_rise /= 15
+    RA_set /= 15
+
+    # 6. Calculate local mean time of rising/setting
+    T_rise = H_rise + RA_rise - (0.06571 * t_rise) - 6.622
+    T_set = H_set + RA_set - (0.06571 * t_set) - 6.622
+
+    # 7. Adjust back to UTC
+    UT_rise = T_rise - lng_hour
+    UT_set = T_set - lng_hour
+
+    # 7c. rounding and impose range bounds
+    UT_rise = round(UT_rise, 2)
+    UT_set = round(UT_set, 2)
+
+    UT_rise = force_range(UT_rise, 24.0)
+    UT_set = force_range(UT_set, 24.0)
+
+    # Convert UT to naive datetime objects
+    sunrise = datetime.combine(date, time(0, 0, 0)) + timedelta(hours=UT_rise)
+    sunset = datetime.combine(date, time(0, 0, 0)) + timedelta(hours=UT_set)
+
+    return sunrise.replace(second=0, microsecond=0), sunset.replace(second=0, microsecond=0)
+
+def force_range(value: float, max_value: float):
+    """
+    Adjusts the value to wrap around within the range [0, max).
+
+    Args:
+        value (float): The value to adjust.
+        max_value (float): The exclusive upper bound of the range.
+
+    Returns:
+        float: The adjusted value within the range [0, max).
+    """
+    if value < 0:
+        return value + max_value
+    elif value >= max_value:
+        return value - max_value
+    return value

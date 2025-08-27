@@ -1,6 +1,9 @@
 import pytest
-from datetime import date, time, datetime
-from ga.utils import lst_to_utc
+from datetime import date, time, datetime, timezone, timedelta
+from ga.utils import lst_to_utc, get_sunrise_sunset
+
+SARAO_CPT_LAT: float = -33.94470
+SARAO_CPT_LON: float = 18.47810
 
 @pytest.mark.parametrize(
     "test_date, test_lst, expected_utc",
@@ -64,3 +67,120 @@ def test_lst_to_utc_does_not_match_wrong_utc(test_date: date, test_lst: time, wr
     print(f"\nCalculated UTC: {result} | Expected (wrong) UTC: {wrong_expected_utc} | Δ = {delta:.2f} seconds")
 
     assert delta > 5, f"Test failed: LST conversion too close to wrong value ({delta:.2f} seconds)"
+
+@pytest.mark.parametrize(
+    "test_date, expected_sunrise, expected_sunset",
+    [
+        (
+            date(2025, 6, 21), # Winter
+            datetime(2025, 6, 21, 7, 31, 0),
+            datetime(2025, 6, 21, 17, 41, 0),
+        ),
+        (
+            date(2025, 12, 21), # Summer
+            datetime(2025, 12, 21, 5, 27, 0),
+            datetime(2025, 12, 21, 19, 36, 0),
+        ),
+        (
+            date(2025, 3, 20), # Autumn
+            datetime(2025, 3, 20, 6, 37, 0),
+            datetime(2025, 3, 20, 18, 45, 0),
+        ),
+        (
+            date(2025, 8, 26), # Spring
+            datetime(2025, 8, 26, 6, 56, 0),
+            datetime(2025, 8, 26, 18, 15, 0),
+        ),
+    ]
+)
+def test_get_sunrise_sunset(test_date: date, expected_sunrise: datetime, expected_sunset: datetime):
+    """
+    Parametrized test for sunrise and sunset times.
+    Validates that the calculated times are within +/- 60 seconds of the expected values.
+    """
+    sunrise, sunset = get_sunrise_sunset(test_date)
+
+    # Converting sunset and sunrise to local time
+    sunrise += timedelta(hours=2)
+    sunset += timedelta(hours=2)
+
+    assert isinstance(sunrise, datetime)
+    assert isinstance(sunset, datetime)
+
+    # Allow for 60-seconds tolerance
+    sunrise_delta = abs((sunrise - expected_sunrise).total_seconds())
+    sunset_delta = abs((sunset - expected_sunset).total_seconds())
+
+    print(f"\nCalculated Sunrise: {sunrise} | Expected Sunrise: {expected_sunrise} | Δ = {sunrise_delta:.2f} seconds")
+    print(f"Calculated Sunset: {sunset} | Expected Sunset: {expected_sunset} | Δ = {sunset_delta:.2f} seconds")
+
+    assert sunrise_delta <= 60, f"Sunrise calculation off by {sunrise_delta:.2f} seconds"
+    assert sunset_delta <= 60, f"Sunset calculation off by {sunset_delta:.2f} seconds"
+
+@pytest.mark.parametrize(
+    "test_date, expected_sunrise, expected_sunset",
+    [
+        (
+            date(2025, 8, 26),
+            datetime(2025, 8, 26, 7, 11, 0),
+            datetime(2025, 8, 26, 18, 24, 0)
+        )
+    ]
+)
+def test_get_sunrise_sunset_cpt(test_date: date, expected_sunrise: datetime, expected_sunset: datetime):
+    """
+    Parametrized test for sunrise and sunset times.
+    Validates that the calculated times are within +/- 60 seconds of the expected values.
+    """
+    sunrise, sunset = get_sunrise_sunset(test_date, latitude=SARAO_CPT_LAT, longitude=SARAO_CPT_LON)
+
+    # Converting sunset and sunrise to local time
+    sunrise += timedelta(hours=2)
+    sunset += timedelta(hours=2)
+
+    assert isinstance(sunrise, datetime)
+    assert isinstance(sunset, datetime)
+
+    # Allow for 60-seconds tolerance
+    sunrise_delta = abs((sunrise - expected_sunrise).total_seconds())
+    sunset_delta = abs((sunset - expected_sunset).total_seconds())
+
+    print(f"\nCalculated Sunrise: {sunrise} | Expected Sunrise: {expected_sunrise} | Δ = {sunrise_delta:.2f} seconds")
+    print(f"Calculated Sunset: {sunset} | Expected Sunset: {expected_sunset} | Δ = {sunset_delta:.2f} seconds")
+
+    assert sunrise_delta <= 60, f"Sunrise calculation off by {sunrise_delta:.2f} seconds"
+    assert sunset_delta <= 60, f"Sunset calculation off by {sunset_delta:.2f} seconds"
+
+@pytest.mark.parametrize(
+    "test_date, wrong_expected_sunrise, wrong_expected_sunset",
+    [
+        (
+            date(2025, 6, 21),
+            datetime(2025, 6, 21, 7, 0, 0),
+            datetime(2025, 6, 21, 19, 0, 0),
+        ),
+        (
+            date(2025, 12, 21),
+            datetime(2025, 12, 21, 7, 0, 0),
+            datetime(2025, 12, 21, 18, 0, 0),
+        ),
+    ]
+)
+def test_get_sunrise_sunset_does_not_match_wrong_values(test_date: date, wrong_expected_sunrise: datetime, wrong_expected_sunset: datetime):
+    """
+    This test ensures the sunrise/sunset calculations do NOT match incorrect reference values.
+    """
+    sunrise, sunset = get_sunrise_sunset(test_date)
+
+    # Converting sunset and sunrise to local time
+    sunrise += timedelta(hours=2)
+    sunset += timedelta(hours=2)
+
+    sunrise_delta = abs((sunrise - wrong_expected_sunrise).total_seconds())
+    sunset_delta = abs((sunset - wrong_expected_sunset).total_seconds())
+
+    print(f"\nCalculated Sunrise: {sunrise} | Wrong Expected Sunrise: {wrong_expected_sunrise} | Δ = {sunrise_delta:.2f} seconds")
+    print(f"Calculated Sunset: {sunset} | Wrong Expected Sunset: {wrong_expected_sunset} | Δ = {sunset_delta:.2f} seconds")
+
+    assert sunrise_delta > 60, f"Sunrise calculation too close to wrong value ({sunrise_delta:.2f} seconds)"
+    assert sunset_delta > 60, f"Sunset calculation too close to wrong value ({sunset_delta:.2f} seconds)"
