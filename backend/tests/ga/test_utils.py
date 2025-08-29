@@ -1,6 +1,6 @@
 import pytest
 from datetime import date, time, datetime, timezone, timedelta
-from ga.utils import lst_to_utc, get_sunrise_sunset
+from ga.utils import lst_to_utc, get_sunrise_sunset, get_plane_arrival_and_departure_blocks
 
 SARAO_CPT_LAT: float = -33.94470
 SARAO_CPT_LON: float = 18.47810
@@ -184,3 +184,30 @@ def test_get_sunrise_sunset_does_not_match_wrong_values(test_date: date, wrong_e
 
     assert sunrise_delta > 60, f"Sunrise calculation too close to wrong value ({sunrise_delta:.2f} seconds)"
     assert sunset_delta > 60, f"Sunset calculation too close to wrong value ({sunset_delta:.2f} seconds)"
+
+@pytest.mark.parametrize(
+    "test_date, expected_blocks",
+    [
+        (date(2025, 4, 30), [       # Wednesday (a long time ago)
+            (datetime(2025, 4, 30, 8, 0, 0), datetime(2025, 4, 30, 10, 0, 0)),  # Arrival
+            (datetime(2025, 4, 30, 14, 0, 0), datetime(2025, 4, 30, 16, 30, 0)),  # Departure
+        ]),
+        (date(2025, 8, 24), []),    # Sunday
+        (date(2025, 8, 25), []),    # Monday
+        (date(2025, 8, 26), []),    # Tuesday
+        (date(2025, 8, 27), [       # Wednesday
+            (datetime(2025, 8, 27, 8, 0, 0), datetime(2025, 8, 27, 10, 0, 0)),  # Arrival
+            (datetime(2025, 8, 27, 14, 0, 0), datetime(2025, 8, 27, 16, 30, 0)),  # Departure
+        ]),
+        (date(2025, 8, 28), []),    # Thursday
+        (date(2025, 8, 29), []),    # Friday
+        (date(2025, 8, 30), [])     # Saturday 
+    ]
+)
+def test_get_plane_arrival_and_departure_blocks(test_date: date, expected_blocks: list[tuple[datetime, datetime]]):
+    """
+    Test the plane arrival and departure blocks for various dates.
+    """
+
+    plane_blocks: list[tuple[datetime, datetime]] = get_plane_arrival_and_departure_blocks(test_date)
+    assert plane_blocks == expected_blocks, f"Expected {expected_blocks}, but got {plane_blocks}"
