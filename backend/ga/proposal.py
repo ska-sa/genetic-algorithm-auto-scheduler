@@ -1,5 +1,5 @@
 from datetime import datetime, date, time, timedelta
-from .utils import lst_to_utc, get_night_window, get_sunrise_sunset
+from .utils import lst_to_utc, get_night_window, get_sunrise_sunset, get_plane_arrival_and_departure_blocks
 
 class Proposal():
     """ A class representing proposals to be scheduled.
@@ -155,6 +155,29 @@ class Proposal():
 
         return True
     
+    def plane_arrival_and_departure_constraint_met(self, proposed_start_datetime: datetime) -> bool:
+        """
+        Checks if the proposed start datetime does not clash with existing plane arrival and departure blocks.
+
+        Args:
+            proposed_start_datetime (datetime): The proposed start datetime for the proposal.
+
+        Returns:
+            bool: True if no clashes occur with the plane schedules, False otherwise.
+        """
+        # Calculate the end datetime of the proposal
+        proposal_end_datetime = proposed_start_datetime + timedelta(seconds=self.simulated_duration)
+
+        # Get both arrival and departure blocks based on the proposed start date
+        plane_blocks = get_plane_arrival_and_departure_blocks(proposed_start_datetime.date())
+
+        # Check for time clashes with the proposal
+        for start, end in plane_blocks:
+            if (proposed_start_datetime <= end) and (proposal_end_datetime >= start):
+                return False  # There is a clash
+
+        return True  # No clashes found
+            
     def all_constraints_met(self, proposed_start_datetime: datetime) -> bool:
         """
         Check if the given proposed_start_datetime satisfies all constraints for this proposal.
@@ -169,10 +192,13 @@ class Proposal():
         is_time_constraint_met = self.lst_start_end_time_constraint_met(proposed_start_datetime)
         is_night_obs_constraint_met = self.night_obs_constraint_met(proposed_start_datetime)
         is_avoid_sunrise_sunset_constraint_met = self.avoid_sunrise_sunset_constraint_met(proposed_start_datetime)
+        is_plane_arrival_and_depature_contraint_met = self.plane_arrival_and_departure_constraint_met(proposed_start_datetime)
+
         # Return True only if all constraints are satisfied
         return (is_time_constraint_met and
                 is_night_obs_constraint_met and
-                is_avoid_sunrise_sunset_constraint_met)
+                is_avoid_sunrise_sunset_constraint_met and
+                is_plane_arrival_and_depature_contraint_met)
     
     def to_dict(self) -> dict:
         """
