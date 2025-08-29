@@ -18,6 +18,11 @@ ZENITH = 90 + 50 / 60  # Official zenith for sunrise/sunset in degrees
 # MATH CONSTANT
 TO_RAD = math.pi/180.0
 
+# PLANE TIME CONSTANTS
+PLANE_WEEK_DAY: int = 2  # Wednesday = 2 according to date.weekday()
+PLANE_ARRIVAL_TIME_BLOCK: tuple[time, time] = (time(8, 0, 0), time(10, 0, 0))
+PLANE_DEPARTURE_TIME_BLOCK: tuple[time, time] = (time(14, 0, 0), time(16, 30, 0))
+
 def degrees_string_to_float(degrees: str) -> float:
     """
     Convert a string in the format "hh:mm:ss.s" to a float in degrees.
@@ -295,3 +300,42 @@ def force_range(value: float, max_value: float):
     elif value >= max_value:
         return value - max_value
     return value
+
+def get_plane_arrival_and_departure_blocks(
+    date: date,
+    plane_weekday: int = PLANE_WEEK_DAY,
+    plane_arrival_time_block: tuple[time, time] = PLANE_ARRIVAL_TIME_BLOCK,
+    plane_departure_time_block: tuple[time, time] = PLANE_DEPARTURE_TIME_BLOCK
+) -> list[tuple[datetime, datetime]]:
+    """
+    Retrieve the plane arrival and departure time blocks for a specified date.
+
+    Args:
+        date (date): The date for which to retrieve the plane arrival and departure blocks.
+        plane_weekday (int): The weekday (0=Monday, 6=Sunday) when the plane operates. 
+                             Defaults to PLANE_WEEK_DAY.
+        plane_arrival_time_block (tuple[time, time]): A tuple representing the start and end time 
+                                                      for plane arrivals. Defaults to PLANE_ARRIVAL_TIME_BLOCK.
+        plane_departure_time_block (tuple[time, time]): A tuple representing the start and end time 
+                                                       for plane departures. Defaults to PLANE_DEPARTURE_TIME_BLOCK.
+
+    Returns:
+        list[tuple[datetime, datetime]]: A list of tuples, each containing:
+            - Arrival or departure start time as a datetime object.
+            - Arrival or departure end time as a datetime object.
+    """
+    # Initialize an empty list to hold the arrival and departure blocks
+    plane_arrival_and_departure_blocks: list[tuple[datetime, datetime]] = []
+
+    # Check if the specified date is the correct weekday for operations
+    if date.weekday() == plane_weekday:
+        # Define the time blocks for arrival and departure
+        time_blocks = [plane_arrival_time_block, plane_departure_time_block]
+
+        # Combine the date with each time block and append to the list
+        for (start_time, end_time) in time_blocks:
+            start_datetime = datetime.combine(date, start_time)
+            end_datetime = datetime.combine(date, end_time)
+            plane_arrival_and_departure_blocks.append((start_datetime, end_datetime))
+
+    return plane_arrival_and_departure_blocks
