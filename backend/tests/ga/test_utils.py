@@ -189,15 +189,15 @@ def test_get_sunrise_sunset_does_not_match_wrong_values(test_date: date, wrong_e
     "test_date, expected_blocks",
     [
         (date(2025, 4, 30), [       # Wednesday (a long time ago)
-            (datetime(2025, 4, 30, 8, 0, 0), datetime(2025, 4, 30, 10, 0, 0)),  # Arrival
-            (datetime(2025, 4, 30, 14, 0, 0), datetime(2025, 4, 30, 16, 30, 0)),  # Departure
+            (datetime(2025, 4, 30, 8, 0, 0), datetime(2025, 4, 30, 9, 0, 0)),  # Arrival
+            (datetime(2025, 4, 30, 15, 0, 0), datetime(2025, 4, 30, 17, 0, 0)),  # Departure
         ]),
         (date(2025, 8, 24), []),    # Sunday
         (date(2025, 8, 25), []),    # Monday
         (date(2025, 8, 26), []),    # Tuesday
         (date(2025, 8, 27), [       # Wednesday
-            (datetime(2025, 8, 27, 8, 0, 0), datetime(2025, 8, 27, 10, 0, 0)),  # Arrival
-            (datetime(2025, 8, 27, 14, 0, 0), datetime(2025, 8, 27, 16, 30, 0)),  # Departure
+            (datetime(2025, 8, 27, 8, 0, 0), datetime(2025, 8, 27, 9, 0, 0)),  # Arrival
+            (datetime(2025, 8, 27, 15, 0, 0), datetime(2025, 8, 27, 17, 0, 0)),  # Departure
         ]),
         (date(2025, 8, 28), []),    # Thursday
         (date(2025, 8, 29), []),    # Friday

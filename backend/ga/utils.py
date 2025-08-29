@@ -20,8 +20,8 @@ TO_RAD = math.pi/180.0
 
 # PLANE TIME CONSTANTS
 PLANE_WEEK_DAY: int = 2  # Wednesday = 2 according to date.weekday()
-PLANE_ARRIVAL_TIME_BLOCK: tuple[time, time] = (time(8, 0, 0), time(10, 0, 0))
-PLANE_DEPARTURE_TIME_BLOCK: tuple[time, time] = (time(14, 0, 0), time(16, 30, 0))
+PLANE_ARRIVAL_TIME_BLOCK: tuple[time, time] = (time(8, 0, 0), time(9, 0, 0))
+PLANE_DEPARTURE_TIME_BLOCK: tuple[time, time] = (time(15, 0, 0), time(17, 0, 0))
 
 def degrees_string_to_float(degrees: str) -> float:
     """

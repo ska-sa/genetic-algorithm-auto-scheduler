@@ -10,11 +10,11 @@ from ga.proposal import Proposal
         (datetime(2025, 8, 27, 7, 55, 0), False),   # Clash with arrival time block
         (datetime(2025, 8, 27, 8, 0, 0), False),   # Clash with arrival time block
         (datetime(2025, 8, 27, 9, 0, 0), False),    # Clash with arrival time block
-        (datetime(2025, 8, 27, 10, 0, 0), False),   # Clash with arrival time block
+        (datetime(2025, 8, 27, 10, 0, 0), True),   # No clash with both arrival and departure
         (datetime(2025, 8, 27, 10, 1, 0), True),    # No clash with both arrival and departure
-        (datetime(2025, 8, 27, 13, 0, 0), False),    # Clash with depature time block
-        (datetime(2025, 8, 27, 14, 11, 0), False),  # Clash with depature time block
-        (datetime(2025, 8, 27, 17, 0, 0), True),    # No clash with both arrival and departure
+        (datetime(2025, 8, 27, 13, 0, 0), True),    # No clash with both arrival and departure
+        (datetime(2025, 8, 27, 17, 0, 0), False),  # Clash with depature time block
+        (datetime(2025, 8, 27, 22, 11, 0), True),    # No clash with both arrival and departure
 
         # Friday
         (datetime(2025, 8, 29, 7, 55, 0), True),    # No clash with both arrival and departure
